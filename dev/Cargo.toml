@@ -1,0 +1,17 @@
+[package]
+name = "spline"
+version = "0.1.0"
+edition = "2018"
+
+[profile.release]
+opt-level=3
+lto = true
+
+[dependencies]
+png = "0.11.0"
+cairo-rs = { version = "0.2.0", features = ["png"] }
+rand = "0.6.5"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"

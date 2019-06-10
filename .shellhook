@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+if [ $(uname -s) = "Darwin" ]; then
+    alias ls='ls --color=auto'
+    alias ll='ls -l'
+else
+    alias open="xdg-open"
+fi
+
+export WD=$(pwd)
+export RUSTUP_HOME="$WD/.rustup_home"
+export CARGO_HOME="$WD/.cargo_home"
+
+for dir in $RUSTUP_HOME $CARGO_HOME/bin dev/out; do
+    if [ ! -d $dir ]; then
+        mkdir -p $dir
+    fi
+done
+
+PATH="$PATH:$CARGO_HOME/bin"
+
+if [ ! -f .init ]; then
+    rustup install stable
+    rustup default stable
+    rustup component add clippy
+    rustup component add rustfmt
+    rustup toolchain install nightly
+    rustup component add rustfmt --toolchain nightly
+    rustup component add clippy --toolchain nightly
+    touch .init
+fi
+
+rustup update
+
+alias nightfmt="rustup run nightly rustfmt"
+alias nightclippy="
+    rustup run nightly cargo clippy -- -D warnings -W clippy::pedantic
+"
+alias nighttest="rustup run nightly cargo test"
+alias nightbench="rustup run nightly cargo bench"
+alias nightrelease="rustup run nightly cargo build --release"
+alias nightrun="rustup run nightly cargo run --release"
