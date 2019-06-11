@@ -21,15 +21,15 @@ struct CurveParams {
 fn parse_args() -> (i32, i32, u64) {
     let args: Vec<String> = env::args().collect();
     if args.len() == 4 {
-        if let (Ok(w), Ok(h), Ok(seed)) = (
+        if let (Ok(width), Ok(height), Ok(seed)) = (
             args[1].parse::<i32>(),
             args[2].parse::<i32>(),
             args[3].parse::<u64>(),
         ) {
-            return (w, h, seed);
+            return (width, height, seed);
         }
     }
-    eprintln!("usage: {} <int> <int> <int>", &args[0]);
+    eprintln!("usage: {} <width: int> <height: int> <seed: int>", &args[0]);
     exit(1);
 }
 
