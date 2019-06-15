@@ -27,6 +27,17 @@ struct LineParams<'a> {
     color: &'a Color,
 }
 
+const WHITE: Color = Color {
+    r: 1.0,
+    g: 1.0,
+    b: 1.0,
+};
+const BLACK: Color = Color {
+    r: 0.0,
+    g: 0.0,
+    b: 0.0,
+};
+
 fn parse_args() -> (i32, i32, u64) {
     let args: Vec<String> = env::args().collect();
     if args.len() == 4 {
@@ -145,18 +156,8 @@ fn main() {
     let n_slices: usize = 1000; // curve.len() == n_slices + 1
     let lw_curve: f64 = 6.5 / resolution_float;
     let lw_skeleton: f64 = 4.0 / resolution_float;
-    let white: Color = Color {
-        r: 1.0,
-        g: 1.0,
-        b: 1.0,
-    };
-    let black: Color = Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-    };
     let (surface, context): (cairo::ImageSurface, cairo::Context) =
-        init_surface(resolution_int * width, resolution_int * height, &white);
+        init_surface(resolution_int * width, resolution_int * height, &WHITE);
     iter_curve(
         &context,
         &mut rng,
@@ -169,7 +170,7 @@ fn main() {
             n_control,
             n_slices,
             degree,
-            color: black,
+            color: BLACK,
         },
     );
     write_png(surface);
