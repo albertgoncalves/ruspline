@@ -1,13 +1,13 @@
 #![feature(test)]
 
+mod drawing;
 mod spline;
 mod test;
 
-use cairo::{Context, Format, ImageSurface};
-use rand::prelude::*;
+use drawing::{init_surface, write_png, Color};
+use rand::prelude::{Rng, SeedableRng, StdRng};
 use spline::{init_ts, spline};
 use std::env;
-use std::fs::File;
 use std::process::exit;
 
 struct CurveParams {
@@ -16,6 +16,15 @@ struct CurveParams {
     n_control: usize,
     n_slices: usize,
     degree: usize,
+    color: Color,
+}
+
+struct LineParams<'a> {
+    width: f64,
+    line_alpha: f64,
+    fill: bool,
+    fill_alpha: f64,
+    color: &'a Color,
 }
 
 fn parse_args() -> (i32, i32, u64) {
@@ -33,17 +42,6 @@ fn parse_args() -> (i32, i32, u64) {
     exit(1);
 }
 
-fn init_surface(w: i32, h: i32) -> (cairo::ImageSurface, cairo::Context) {
-    let surface: cairo::ImageSurface =
-        ImageSurface::create(Format::ARgb32, w, h)
-            .expect("Unable to create surface");
-    let context: cairo::Context = Context::new(&surface);
-    context.set_antialias(cairo::Antialias::Best);
-    context.set_source_rgb(1.0, 1.0, 1.0);
-    context.paint();
-    (surface, context)
-}
-
 fn random_points(rng: &mut StdRng, n: usize) -> Vec<f32> {
     (0..n * 2).map(|_| (rng.gen::<f32>() * 2.0) - 1.0).collect()
 }
@@ -52,21 +50,28 @@ fn draw_lines<'a>(
     context: &cairo::Context,
     xs: &'a [f32],
     n: usize,
-    width: f64,
-    line_alpha: f64,
-    fill: bool,
-    fill_alpha: f64,
+    params: &LineParams,
 ) -> Result<(), &'a str> {
     if xs.len() == n * 2 {
         for i in 0..n / 2 {
             context.line_to(xs[i * 2].into(), xs[(i * 2) + 1].into());
         }
-        context.set_line_width(width);
-        if fill {
-            context.set_source_rgba(0.0, 0.0, 0.0, fill_alpha);
+        context.set_line_width(params.width);
+        if params.fill {
+            context.set_source_rgba(
+                params.color.r,
+                params.color.g,
+                params.color.b,
+                params.fill_alpha,
+            );
             context.fill_preserve();
         }
-        context.set_source_rgba(0.0, 0.0, 0.0, line_alpha);
+        context.set_source_rgba(
+            params.color.r,
+            params.color.g,
+            params.color.b,
+            params.line_alpha,
+        );
         context.stroke();
         Ok(())
     } else {
@@ -103,33 +108,31 @@ fn iter_curve(
                 context,
                 &curve,
                 params.n_slices + 1,
-                params.lw_curve,
-                1.0,
-                true,
-                0.075,
+                &LineParams {
+                    width: params.lw_curve,
+                    line_alpha: 1.0,
+                    fill: true,
+                    fill_alpha: 0.075,
+                    color: &params.color,
+                },
             )
             .expect("Unable to draw curve");
             draw_lines(
                 context,
                 &points,
                 params.n_control,
-                params.lw_skeleton,
-                0.125,
-                false,
-                0.0,
+                &LineParams {
+                    width: params.lw_skeleton,
+                    line_alpha: 0.125,
+                    fill: false,
+                    fill_alpha: 0.0,
+                    color: &params.color,
+                },
             )
             .expect("Unable to draw skeleton");
             context.restore();
         }
     }
-}
-
-fn write_png(surface: &cairo::ImageSurface) {
-    let mut file =
-        File::create("out/main.png").expect("Unable to create file");
-    surface
-        .write_to_png(&mut file)
-        .expect("Unable to write to png");
 }
 
 fn main() {
@@ -142,8 +145,18 @@ fn main() {
     let n_slices: usize = 1000; // curve.len() == n_slices + 1
     let lw_curve: f64 = 6.5 / resolution_float;
     let lw_skeleton: f64 = 4.0 / resolution_float;
+    let white: Color = Color {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+    };
+    let black: Color = Color {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+    };
     let (surface, context): (cairo::ImageSurface, cairo::Context) =
-        init_surface(resolution_int * width, resolution_int * height);
+        init_surface(resolution_int * width, resolution_int * height, &white);
     iter_curve(
         &context,
         &mut rng,
@@ -156,7 +169,8 @@ fn main() {
             n_control,
             n_slices,
             degree,
+            color: black,
         },
     );
-    write_png(&surface);
+    write_png(surface);
 }
