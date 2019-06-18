@@ -57,6 +57,7 @@ fn random_points(rng: &mut StdRng, n: usize) -> Vec<f32> {
     (0..n * 2).map(|_| (rng.gen::<f32>() * 2.0) - 1.0).collect()
 }
 
+#[allow(clippy::integer_division)]
 fn draw_lines<'a>(
     context: &cairo::Context,
     xs: &'a [f32],
@@ -173,5 +174,5 @@ fn main() {
             color: BLACK,
         },
     );
-    write_png(surface);
+    write_png(&surface);
 }

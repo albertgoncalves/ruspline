@@ -22,7 +22,7 @@ pub fn init_surface(
     (surface, context)
 }
 
-pub fn write_png(surface: cairo::ImageSurface) {
+pub fn write_png(surface: &cairo::ImageSurface) {
     let mut file =
         File::create("out/main.png").expect("Unable to create file");
     surface
