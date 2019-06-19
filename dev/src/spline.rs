@@ -68,16 +68,11 @@ pub fn spline(
     for k in 0..ts.len() {
         if (ts[k] >= 0.0) && (ts[k] <= 1.0) {
             let t: f32 = (ts[k] * (high - low)) + low;
-            match find_s(n, degree, t, &knots) {
-                None => return None,
-                Some(s) => {
-                    let xs: Vec<f32> =
-                        deboor(m, degree, t, s, vs.clone(), &knots);
-                    for j in 0..m {
-                        ys[(k * m) + j] =
-                            xs[(s * (m + 1)) + j] / xs[(s * (m + 1)) + m];
-                    }
-                }
+            let s: usize = find_s(n, degree, t, &knots)?;
+            let xs: Vec<f32> = deboor(m, degree, t, s, vs.clone(), &knots);
+            for j in 0..m {
+                ys[(k * m) + j] =
+                    xs[(s * (m + 1)) + j] / xs[(s * (m + 1)) + m];
             }
         }
     }
