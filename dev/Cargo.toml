@@ -8,9 +8,9 @@ opt-level=3
 lto = true
 
 [dependencies]
-png = "0.11.0"
-cairo-rs = { version = "0.2.0", features = ["png"] }
-rand = "0.6.5"
+png = "0.11"
+cairo-rs = { version = "0.2", features = ["png"] }
+rand = "0.6"
 
 [[bin]]
 name = "main"
