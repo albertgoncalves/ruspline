@@ -2,7 +2,7 @@
 
 ![](cover.png)
 
-Needed hings
+Needed things
 ---
  * [Nix](https://nixos.org/nix/)
 
