@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2018"
 
 [profile.release]
-opt-level=3
+opt-level = 3
 lto = true
+panic = "abort"
 
 [dependencies]
 png = "0.11"
