@@ -7,14 +7,6 @@ pub struct Color {
     pub b: f64,
 }
 
-pub struct LineParams<'a> {
-    pub width: f64,
-    pub line_alpha: f64,
-    pub fill: bool,
-    pub fill_alpha: f64,
-    pub color: &'a Color,
-}
-
 pub fn init_surface(
     width: i32,
     height: i32,
@@ -31,33 +23,27 @@ pub fn init_surface(
         })
 }
 
-#[allow(clippy::integer_division)]
+#[allow(clippy::integer_division, clippy::too_many_arguments)]
 pub fn draw_lines<'a>(
     context: &cairo::Context,
     xs: &'a [f32],
     n: usize,
-    params: &LineParams,
+    width: f64,
+    line_alpha: f64,
+    fill: bool,
+    fill_alpha: f64,
+    color: &Color,
 ) -> Result<(), &'a str> {
     if xs.len() == n * 2 {
         for i in 0..n / 2 {
             context.line_to(xs[i * 2].into(), xs[(i * 2) + 1].into());
         }
-        context.set_line_width(params.width);
-        if params.fill {
-            context.set_source_rgba(
-                params.color.r,
-                params.color.g,
-                params.color.b,
-                params.fill_alpha,
-            );
+        context.set_line_width(width);
+        if fill {
+            context.set_source_rgba(color.r, color.g, color.b, fill_alpha);
             context.fill_preserve();
         }
-        context.set_source_rgba(
-            params.color.r,
-            params.color.g,
-            params.color.b,
-            params.line_alpha,
-        );
+        context.set_source_rgba(color.r, color.g, color.b, line_alpha);
         context.stroke();
         Ok(())
     } else {
