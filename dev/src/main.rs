@@ -54,6 +54,7 @@ fn main() {
     let n_slices: usize = 1000; // curve.len() == n_slices + 1
     let (surface, context): (cairo::ImageSurface, cairo::Context) =
         init_surface(res_int * width, res_int * height, &WHITE).unwrap();
+    let mut rng: StdRng = SeedableRng::seed_from_u64(seed);
     for i in 0..width {
         for j in 0..height {
             let x = (f64::from(i) * res_float) + res_half;
@@ -61,10 +62,7 @@ fn main() {
             context.save();
             context.translate(x, y);
             context.scale(res_half, res_half);
-            let points: Vec<f32> = random_points(
-                &mut SeedableRng::seed_from_u64(seed),
-                n_control,
-            );
+            let points: Vec<f32> = random_points(&mut rng, n_control);
             let curve: Vec<f32> =
                 spline(&points, n_control, 2, 5, &init_ts(n_slices)).unwrap();
             draw_lines(
