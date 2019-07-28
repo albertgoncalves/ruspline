@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 
-if [ $(uname -s) = "Darwin" ]; then
+if [ "$(uname -s)" = "Darwin" ]; then
     alias ls='ls --color=auto'
     alias ll='ls -l'
 else
     alias open="xdg-open"
 fi
 
-export WD=$(pwd)
+export WD
+WD=$(pwd)
 export RUSTUP_HOME="$WD/.rustup_home"
 export CARGO_HOME="$WD/.cargo_home"
 
-for dir in $RUSTUP_HOME $CARGO_HOME/bin dev/out; do
-    if [ ! -d $dir ]; then
-        mkdir -p $dir
+for x in $RUSTUP_HOME $CARGO_HOME/bin dev/out; do
+    if [ ! -d "$x" ]; then
+        mkdir -p "$x"
     fi
 done
 

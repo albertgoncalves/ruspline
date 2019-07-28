@@ -5,6 +5,7 @@ with pkgs; mkShell {
         cairo
         gtk2
         rustup
+        shellcheck
     ];
     shellHook = ''
         . .shellhook
