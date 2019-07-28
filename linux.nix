@@ -5,6 +5,7 @@ with pkgs; mkShell {
         cairo
         pkg-config
         rustup
+        shellcheck
     ];
     shellHook = ''
         . .shellhook
