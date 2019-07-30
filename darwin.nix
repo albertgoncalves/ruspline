@@ -1,6 +1,5 @@
-{ pkgs ? import <nixpkgs> {} }:
-with pkgs; mkShell {
-    name = "ruspline";
+with import <nixpkgs> {};
+mkShell {
     buildInputs = [
         cairo
         gtk2
