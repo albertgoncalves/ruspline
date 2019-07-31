@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
+cd "$WD/dev" || exit
+rustup run nightly cargo build --release
+
 if [ "$(uname -s)" = "Darwin" ]; then
     # http://carol-nichols.com/2017/04/20/rust-profiling-with-dtrace-on-osx/
-    cd "$WD/dev" || exit
-    rustup run nightly cargo build --release
     sudo dtrace \
         -c './target/release/main 5 5 1 out/main.png' \
         -o "$WD/prof/out.stacks" \
@@ -13,11 +14,10 @@ if [ "$(uname -s)" = "Darwin" ]; then
     open prof.svg
 else
     # https://blog.anp.lol/rust/2016/07/24/profiling-rust-perf-flamegraph/
-    cd "$WD/dev" || exit
-    rustup run nightly cargo build --release
     cd "$WD/prof" || exit
     sudo sh -c 'echo 1 >/proc/sys/kernel/perf_event_paranoid'
     perf record -g "$WD/dev/target/release/main" 5 5 1 out/main.png
+    perf report
     perf script | stackcollapse-perf.pl | flamegraph.pl > prof.svg
     google-chrome prof.svg
 fi
