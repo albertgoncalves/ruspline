@@ -1,10 +1,8 @@
 #[allow(clippy::cast_precision_loss)]
-#[inline]
 pub fn init_ts(n: usize) -> Vec<f32> {
     (0..=n).map(|x| x as f32 / n as f32).collect()
 }
 
-#[inline]
 pub fn init_vs(points: &[f32], n: usize, m: usize) -> Vec<f32> {
     let mut vs: Vec<f32> = vec![1.0; n * (m + 1)];
     for i in 0..n {
@@ -15,7 +13,6 @@ pub fn init_vs(points: &[f32], n: usize, m: usize) -> Vec<f32> {
     vs
 }
 
-#[inline]
 fn find_s(n: usize, degree: usize, t: f32, knots: &[f32]) -> Option<usize> {
     for i in degree..n {
         if (t <= knots[i + 1]) && (t >= knots[i]) {
