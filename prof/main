@@ -11,4 +11,13 @@ if [ "$(uname -s)" = "Darwin" ]; then
     cd "$WD/prof" || exit
     stackcollapse.pl out.stacks | flamegraph.pl > prof.svg
     open prof.svg
+else
+    # https://blog.anp.lol/rust/2016/07/24/profiling-rust-perf-flamegraph/
+    cd "$WD/dev" || exit
+    rustup run nightly cargo build --release
+    cd "$WD/prof" || exit
+    sudo sh -c 'echo 1 >/proc/sys/kernel/perf_event_paranoid'
+    perf record -g "$WD/dev/target/release/main" 5 5 1 out/main.png
+    perf script | stackcollapse-perf.pl | flamegraph.pl > prof.svg
+    google-chrome prof.svg
 fi

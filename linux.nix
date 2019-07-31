@@ -3,6 +3,8 @@ mkShell {
     buildInputs = [
         cairo
         flamegraph
+        glibcLocales
+        linuxPackages.perf
         pkg-config
         rustup
         shellcheck
