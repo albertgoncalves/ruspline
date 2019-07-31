@@ -9,3 +9,5 @@
 !src/
 !*.rs
 !*.toml
+!prof/
+!main

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+if [ "$(uname -s)" = "Darwin" ]; then
+    # http://carol-nichols.com/2017/04/20/rust-profiling-with-dtrace-on-osx/
+    cd "$WD/dev" || exit
+    rustup run nightly cargo build --release
+    sudo dtrace \
+        -c './target/release/main 5 5 1 out/main.png' \
+        -o "$WD/prof/out.stacks" \
+        -n 'profile-997 /execname == "main"/ { @[ustack(100)] = count(); }'
+    cd "$WD/prof" || exit
+    stackcollapse.pl out.stacks | flamegraph.pl > prof.svg
+    open prof.svg
+fi
