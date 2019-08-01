@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-cd "$WD/dev" || exit
+set -eu
+
+cd "$WD/dev"
 rustup run nightly cargo build --release
 
 if [ "$(uname -s)" = "Darwin" ]; then
@@ -8,13 +10,14 @@ if [ "$(uname -s)" = "Darwin" ]; then
     sudo dtrace \
         -c './target/release/main 5 5 1 out/main.png' \
         -o "$WD/prof/out.stacks" \
-        -n 'profile-997 /execname == "main"/ { @[ustack(100)] = count(); }'
-    cd "$WD/prof" || exit
+        -n 'profile-997 /execname == "main"/ { @[ustack(5000)] = count(); }'
+    cd "$WD/prof"
     stackcollapse.pl out.stacks | flamegraph.pl > prof.svg
+    rm -f out.stacks
     open prof.svg
 else
     # https://blog.anp.lol/rust/2016/07/24/profiling-rust-perf-flamegraph/
-    cd "$WD/prof" || exit
+    cd "$WD/prof"
     sudo sh -c 'echo 1 >/proc/sys/kernel/perf_event_paranoid'
     perf record -g "$WD/dev/target/release/main" 5 5 1 out/main.png
     perf report
