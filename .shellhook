@@ -33,14 +33,7 @@ fi
 
 rustup update
 
-nightfmts() {
-    for f in "$WD"/dev/src/*.rs; do
-        echo "$f"
-        rustup run nightly rustfmt "$f"
-    done
-}
-
-export -f nightfmts
+alias rustfmt="rustup run nightly rustfmt -v"
 alias nightclippy="
     rustup run nightly cargo clippy -- -D warnings -W clippy::pedantic
 "
