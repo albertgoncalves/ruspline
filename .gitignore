@@ -1,10 +1,10 @@
 *
 !.gitignore
+!*.nix
+!shell
+!.shellhook
 !README.md
 !cover.png
-!*.nix
-!.shellhook
-!shell
 !dev/
 !src/
 !*.rs
