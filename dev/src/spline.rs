@@ -15,7 +15,7 @@ pub fn init_vs(points: &[f32], n: usize, m: usize) -> Vec<f32> {
 
 fn find_s(n: usize, degree: usize, t: f32, knots: &[f32]) -> Option<usize> {
     for i in degree..n {
-        if (t <= knots[i + 1]) && (t >= knots[i]) {
+        if (t <= knots[i + 1]) && (knots[i] <= t) {
             return Some(i);
         }
     }
@@ -63,7 +63,7 @@ pub fn spline(
     let vs: Vec<f32> = init_vs(points, n, m);
     let mut ys: Vec<f32> = vec![0.0; ts.len() * m];
     for k in 0..ts.len() {
-        if (ts[k] >= 0.0) && (ts[k] <= 1.0) {
+        if (0.0 <= ts[k]) && (ts[k] <= 1.0) {
             let t: f32 = (ts[k] * (high - low)) + low;
             let s: usize = find_s(n, degree, t, &knots)?;
             let xs: Vec<f32> = deboor(m, degree, t, s, vs.clone(), &knots);
