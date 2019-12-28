@@ -35,7 +35,8 @@ pub fn draw_lines<'a>(
     color: &Color,
 ) -> Result<(), &'a str> {
     if xs.len() == n * 2 {
-        for i in 0..n / 2 {
+        context.move_to(xs[0].into(), xs[1].into());
+        for i in 1..n / 2 {
             context.line_to(xs[i * 2].into(), xs[(i * 2) + 1].into());
         }
         context.set_line_width(width);
