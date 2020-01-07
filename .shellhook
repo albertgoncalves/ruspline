@@ -7,8 +7,7 @@ else
     alias open="xdg-open"
 fi
 
-export WD
-WD=$(pwd)
+export WD=$PWD
 export RUSTUP_HOME="$WD/.rustup_home"
 export CARGO_HOME="$WD/.cargo_home"
 
@@ -32,6 +31,8 @@ if [ ! -f .init ]; then
 fi
 
 rustup update
+
+export RUSTFLAGS="-C target-cpu=native"
 
 alias rustfmt="rustup run nightly rustfmt -v"
 alias nightclippy="
