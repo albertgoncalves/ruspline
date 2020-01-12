@@ -4,7 +4,7 @@
 
 Needed things
 ---
- * [Nix](https://nixos.org/nix/)
+*   [Nix](https://nixos.org/nix/)
 
 Quick start
 ---
