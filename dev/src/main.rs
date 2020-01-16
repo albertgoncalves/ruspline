@@ -4,11 +4,10 @@ mod drawing;
 mod spline;
 mod test;
 
-use drawing::{draw_lines, init_surface, write_png, Color};
+use drawing::Color;
 use rand::prelude::{Rng, SeedableRng, StdRng};
-use spline::{init_ts, spline};
 use std::env;
-use std::process::exit;
+use std::process;
 
 const WHITE: Color = Color {
     r: 1.0,
@@ -37,7 +36,7 @@ fn parse_args() -> (i32, i32, u64, String) {
         "usage: {} <width: int> <height: int> <seed: int> <filename: string>",
         &args[0]
     );
-    exit(1);
+    process::exit(1);
 }
 
 fn random_points(rng: &mut StdRng, n: usize) -> Vec<f32> {
@@ -53,7 +52,8 @@ fn main() {
     let n_control: usize = 15;
     let n_slices: usize = 1000; // curve.len() == n_slices + 1
     let (surface, context): (cairo::ImageSurface, cairo::Context) =
-        init_surface(res_int * width, res_int * height, &WHITE).unwrap();
+        drawing::init_surface(res_int * width, res_int * height, &WHITE)
+            .unwrap();
     let mut rng: StdRng = SeedableRng::seed_from_u64(seed);
     for i in 0..width {
         for j in 0..height {
@@ -63,9 +63,15 @@ fn main() {
             context.translate(x, y);
             context.scale(res_half, res_half);
             let points: Vec<f32> = random_points(&mut rng, n_control);
-            let curve: Vec<f32> =
-                spline(&points, n_control, 2, 5, &init_ts(n_slices)).unwrap();
-            draw_lines(
+            let curve: Vec<f32> = spline::spline(
+                &points,
+                n_control,
+                2,
+                5,
+                &spline::init_ts(n_slices),
+            )
+            .unwrap();
+            drawing::draw_lines(
                 &context,
                 &curve,
                 n_slices + 1,
@@ -76,7 +82,7 @@ fn main() {
                 &BLACK,
             )
             .unwrap();
-            draw_lines(
+            drawing::draw_lines(
                 &context,
                 &points,
                 n_control,
@@ -90,5 +96,5 @@ fn main() {
             context.restore();
         }
     }
-    write_png(&surface, &filename).unwrap();
+    drawing::write_png(&surface, &filename).unwrap();
 }
