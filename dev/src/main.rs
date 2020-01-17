@@ -23,13 +23,12 @@ const BLACK: Color = Color {
 fn parse_args() -> (i32, i32, u64, String) {
     let args: Vec<String> = env::args().collect();
     if args.len() == 5 {
-        if let (Ok(width), Ok(height), Ok(seed), Ok(filename)) = (
+        if let (Ok(width), Ok(height), Ok(seed)) = (
             args[1].parse::<i32>(),
             args[2].parse::<i32>(),
             args[3].parse::<u64>(),
-            args[4].parse::<String>(),
         ) {
-            return (width, height, seed, filename);
+            return (width, height, seed, args[4].to_owned());
         }
     }
     eprintln!(
@@ -49,8 +48,8 @@ fn main() {
     let res_int: i32 = 256;
     let res_float: f64 = f64::from(res_int);
     let res_half: f64 = res_float / 2.0;
-    let n_control: usize = 15;
-    let n_slices: usize = 1000; // curve.len() == n_slices + 1
+    let n_points: usize = 15;
+    let n_slices: usize = 1000; /* NOTE: curve.len() == n_slices + 1 */
     let (surface, context): (cairo::ImageSurface, cairo::Context) =
         drawing::init_surface(res_int * width, res_int * height, &WHITE)
             .unwrap();
@@ -62,10 +61,10 @@ fn main() {
             context.save();
             context.translate(x, y);
             context.scale(res_half, res_half);
-            let points: Vec<f32> = random_points(&mut rng, n_control);
+            let points: Vec<f32> = random_points(&mut rng, n_points);
             let curve: Vec<f32> = spline::spline(
                 &points,
-                n_control,
+                n_points,
                 2,
                 5,
                 &spline::init_ts(n_slices),
@@ -85,7 +84,7 @@ fn main() {
             drawing::draw_lines(
                 &context,
                 &points,
-                n_control,
+                n_points,
                 4.0 / res_float,
                 0.125,
                 false,

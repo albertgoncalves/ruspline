@@ -11,7 +11,7 @@ export WD=$PWD
 export RUSTUP_HOME="$WD/.rustup_home"
 export CARGO_HOME="$WD/.cargo_home"
 
-for x in $RUSTUP_HOME $CARGO_HOME/bin dev/out; do
+for x in $RUSTUP_HOME/downloads $CARGO_HOME/bin dev/out; do
     if [ ! -d "$x" ]; then
         mkdir -p "$x"
     fi
@@ -35,10 +35,9 @@ rustup update
 export RUSTFLAGS="-C target-cpu=native"
 
 alias rustfmt="rustup run nightly rustfmt -v"
-alias nightclippy="
-    rustup run nightly cargo clippy -- -D warnings -W clippy::pedantic
-"
-alias nighttest="rustup run nightly cargo test -q"
+alias \
+    clippy="rustup run nightly cargo clippy -- -D warnings -W clippy::pedantic"
+alias nighttest="rustup run nightly cargo test"
 alias nightbench="rustup run nightly cargo bench"
-alias nightrelease="rustup run nightly cargo build --release"
+alias nightbuild="rustup run nightly cargo build --release"
 alias nightrun="rustup run nightly cargo run --release"

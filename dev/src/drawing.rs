@@ -33,7 +33,7 @@ pub fn draw_lines<'a>(
     fill: bool,
     fill_alpha: f64,
     color: &Color,
-) -> Result<(), &'a str> {
+) -> Result<(), &'static str> {
     if xs.len() == n * 2 {
         context.move_to(xs[0].into(), xs[1].into());
         for i in 1..n / 2 {
