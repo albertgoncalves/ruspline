@@ -15,34 +15,6 @@ fn distance(a: &Point, b: &Point) -> f64 {
     ((x * x) + (y * y)).sqrt()
 }
 
-fn pt_add_pt(a: &Point, b: &Point) -> Point {
-    Point {
-        x: a.x + b.x,
-        y: a.y + b.y,
-    }
-}
-
-fn pt_sub_pt(a: &Point, b: &Point) -> Point {
-    Point {
-        x: a.x - b.x,
-        y: a.y - b.y,
-    }
-}
-
-fn pt_mul_fl(a: &Point, fl: f64) -> Point {
-    Point {
-        x: a.x * fl,
-        y: a.y * fl,
-    }
-}
-
-fn pt_div_fl(a: &Point, fl: f64) -> Point {
-    Point {
-        x: a.x / fl,
-        y: a.y / fl,
-    }
-}
-
 #[allow(clippy::cast_precision_loss)]
 pub fn make_slices(resolution: usize) -> Vec<Slice> {
     let mut slices: Vec<Slice> = Vec::with_capacity(resolution);
@@ -84,51 +56,39 @@ pub fn make_spline(
         let d01: f64 = distances[i];
         let d12: f64 = distances[i + 1];
         let d23: f64 = distances[i + 2];
-        let p2_sub_p1 = pt_sub_pt(p2, p1);
-        let m1: Point = pt_mul_fl(
-            &pt_add_pt(
-                &p2_sub_p1,
-                &pt_mul_fl(
-                    &pt_sub_pt(
-                        &pt_div_fl(&pt_sub_pt(p1, p0), d01),
-                        &pt_div_fl(&pt_sub_pt(p2, p0), d01 + d12),
-                    ),
-                    d12,
-                ),
-            ),
-            inverse_tension,
-        );
-        let m2: Point = pt_mul_fl(
-            &pt_add_pt(
-                &p2_sub_p1,
-                &pt_mul_fl(
-                    &pt_sub_pt(
-                        &pt_div_fl(&pt_sub_pt(p3, p2), d23),
-                        &pt_div_fl(&pt_sub_pt(p3, p1), d12 + d23),
-                    ),
-                    d12,
-                ),
-            ),
-            inverse_tension,
-        );
-        let p1_sub_p2: Point = pt_sub_pt(p1, p2);
-        let s_a: Point =
-            pt_add_pt(&pt_add_pt(&pt_mul_fl(&p1_sub_p2, 2.0), &m1), &m2);
-        let s_b: Point = pt_sub_pt(
-            &pt_sub_pt(&pt_sub_pt(&pt_mul_fl(&p1_sub_p2, -3.0), &m1), &m1),
-            &m2,
-        );
+        let x_p2_sub_p1: f64 = p2.x - p1.x;
+        let y_p2_sub_p1: f64 = p2.y - p1.y;
+        let d01_d12: f64 = d01 + d12;
+        let d12_d23: f64 = d12 + d23;
+        let x_m1: f64 = inverse_tension
+            * (x_p2_sub_p1
+                + (d12 * (((p1.x - p0.x) / d01) - ((p2.x - p0.x) / d01_d12))));
+        let y_m1: f64 = inverse_tension
+            * (y_p2_sub_p1
+                + (d12 * (((p1.y - p0.y) / d01) - ((p2.y - p0.y) / d01_d12))));
+        let x_m2: f64 = inverse_tension
+            * (x_p2_sub_p1
+                + (d12 * (((p3.x - p2.x) / d23) - ((p3.x - p1.x) / d12_d23))));
+        let y_m2: f64 = inverse_tension
+            * (y_p2_sub_p1
+                + (d12 * (((p3.y - p2.y) / d23) - ((p3.y - p1.y) / d12_d23))));
+        let x_p1_sub_p2: f64 = p1.x - p2.x;
+        let y_p1_sub_p2: f64 = p1.y - p2.y;
+        let x_a: f64 = 2.0 * x_p1_sub_p2 + x_m1 + x_m2;
+        let y_a: f64 = 2.0 * y_p1_sub_p2 + y_m1 + y_m2;
+        let x_b: f64 = -3.0 * x_p1_sub_p2 - x_m1 - x_m1 - x_m2;
+        let y_b: f64 = -3.0 * y_p1_sub_p2 - y_m1 - y_m1 - y_m2;
         for slice in slices {
-            spline.push(pt_add_pt(
-                &pt_add_pt(
-                    &pt_add_pt(
-                        &pt_mul_fl(&s_a, slice.t_cubed),
-                        &pt_mul_fl(&s_b, slice.t_squared),
-                    ),
-                    &pt_mul_fl(&m1, slice.t),
-                ),
-                p1,
-            ));
+            spline.push(Point {
+                x: (x_a * slice.t_cubed)
+                    + (x_b * slice.t_squared)
+                    + (x_m1 * slice.t)
+                    + p1.x,
+                y: (y_a * slice.t_cubed)
+                    + (y_b * slice.t_squared)
+                    + (y_m1 * slice.t)
+                    + p1.y,
+            });
         }
     }
     spline
