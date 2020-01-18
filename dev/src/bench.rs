@@ -2,10 +2,9 @@
 mod benches {
     extern crate test;
 
-    use crate::point::Point;
     use crate::spline;
     use rand::prelude::{SeedableRng, StdRng};
-    use spline::Slice;
+    use spline::{Point, Slice};
     use test::Bencher;
 
     const ALPHA: f64 = 0.5;
