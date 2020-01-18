@@ -8,7 +8,7 @@ rustup run nightly cargo build --release
 if [ "$(uname -s)" = "Darwin" ]; then
     # http://carol-nichols.com/2017/04/20/rust-profiling-with-dtrace-on-osx/
     sudo dtrace \
-        -c './target/release/main 5 5 1 out/main.png' \
+        -c './target/release/main 0.5 0.1 7 0 10 4 100 out/main.png' \
         -o "$WD/prof/out.stacks" \
         -n 'profile-997 /execname == "main"/ { @[ustack(5000)] = count(); }'
     cd "$WD/prof"
@@ -19,7 +19,10 @@ else
     # https://blog.anp.lol/rust/2016/07/24/profiling-rust-perf-flamegraph/
     cd "$WD/prof"
     sudo sh -c 'echo 1 >/proc/sys/kernel/perf_event_paranoid'
-    perf record -g "$WD/dev/target/release/main" 5 5 1 "$WD/dev/out/main.png"
+    perf \
+        record \
+        -g \
+        "$WD/dev/target/release/main 0.5 0.1 7 0 10 4 100 $WD/dev/out/main.png"
     perf report
     perf script | stackcollapse-perf.pl | flamegraph.pl > prof.svg
     google-chrome prof.svg
