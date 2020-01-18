@@ -1,8 +1,7 @@
 with import <nixpkgs> {};
-let 
+let
     shared = [
         cairo
-        flamegraph
         rustup
         shellcheck
     ];
@@ -19,8 +18,6 @@ in
     };
     linux = mkShell {
         buildInputs = [
-            glibcLocales
-            linuxPackages.perf
             pkg-config
         ] ++ shared;
         shellHook = hook;
