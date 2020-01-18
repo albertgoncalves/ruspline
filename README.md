@@ -21,6 +21,6 @@ target/release/main ALPHA TENSION N_POINTS SEED WIDTH HEIGHT TILE_SIZE FILENAME
   HEIGHT    : int    [1,2^16 - 1]
   TILE_SIZE : int    [1,2^16 - 1]
   FILENAME  : string
-[nix-shell:path/to/ruspline/dev]$ nightrun 0.5 0.1 8 10 4 2 350 out/main.png
+[nix-shell:path/to/ruspline/dev]$ nightrun 0.5 0.1 8 0 4 2 350 out/main.png
 [nix-shell:path/to/ruspline/dev]$ open out/main.png
 ```
