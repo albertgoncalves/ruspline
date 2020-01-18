@@ -1,89 +1,135 @@
+pub struct Point {
+    pub x: f64,
+    pub y: f64,
+}
+
+pub struct Slice {
+    t: f64,
+    t_squared: f64,
+    t_cubed: f64,
+}
+
+fn distance(a: &Point, b: &Point) -> f64 {
+    let x: f64 = a.x - b.x;
+    let y: f64 = a.y - b.y;
+    ((x * x) + (y * y)).sqrt()
+}
+
+fn pt_add_pt(a: &Point, b: &Point) -> Point {
+    Point {
+        x: a.x + b.x,
+        y: a.y + b.y,
+    }
+}
+
+fn pt_sub_pt(a: &Point, b: &Point) -> Point {
+    Point {
+        x: a.x - b.x,
+        y: a.y - b.y,
+    }
+}
+
+fn pt_mul_fl(a: &Point, fl: f64) -> Point {
+    Point {
+        x: a.x * fl,
+        y: a.y * fl,
+    }
+}
+
+fn pt_div_fl(a: &Point, fl: f64) -> Point {
+    Point {
+        x: a.x / fl,
+        y: a.y / fl,
+    }
+}
+
 #[allow(clippy::cast_precision_loss)]
-pub fn init_ts(n_points: usize) -> Vec<f32> {
-    (0..=n_points).map(|x| x as f32 / n_points as f32).collect()
+pub fn make_slices(resolution: usize) -> Vec<Slice> {
+    let mut slices: Vec<Slice> = Vec::with_capacity(resolution);
+    for i in 0..resolution {
+        let t: f64 = (i as f64) / (resolution as f64);
+        let t_squared: f64 = t * t;
+        let t_cubed: f64 = t_squared * t;
+        slices.push(Slice {
+            t,
+            t_squared,
+            t_cubed,
+        });
+    }
+    slices
 }
 
-pub fn init_vs(
-    points: &[f32],
-    n_points: usize,
-    n_dimensions: usize,
-) -> Vec<f32> {
-    let mut vs: Vec<f32> = vec![1.0; n_points * (n_dimensions + 1)];
-    for i in 0..n_points {
-        for j in 0..n_dimensions {
-            vs[(i * (n_dimensions + 1)) + j] = points[(i * n_dimensions) + j];
+#[allow(clippy::module_name_repetitions)]
+pub fn make_spline(
+    points: &[Point],
+    slices: &[Slice],
+    alpha: f64,
+    inverse_tension: f64,
+) -> Vec<Point> {
+    let n_points: usize = points.len();
+    let resolution: usize = slices.len();
+    let n_slices: usize = n_points * resolution;
+    let n_splines: usize = n_points - 3;
+    let n_distances: usize = n_points - 1;
+    let mut distances: Vec<f64> = Vec::with_capacity(n_distances);
+    for i in 0..n_distances {
+        distances.push(distance(&points[i], &points[i + 1]).powf(alpha));
+    }
+    let mut spline: Vec<Point> = Vec::with_capacity(n_slices);
+    for i in 0..n_splines {
+        let p0: &Point = &points[i];
+        let p1: &Point = &points[i + 1];
+        let p2: &Point = &points[i + 2];
+        let p3: &Point = &points[i + 3];
+        let d01: f64 = distances[i];
+        let d12: f64 = distances[i + 1];
+        let d23: f64 = distances[i + 2];
+        let p2_sub_p1 = pt_sub_pt(p2, p1);
+        let m1: Point = pt_mul_fl(
+            &pt_add_pt(
+                &p2_sub_p1,
+                &pt_mul_fl(
+                    &pt_sub_pt(
+                        &pt_div_fl(&pt_sub_pt(p1, p0), d01),
+                        &pt_div_fl(&pt_sub_pt(p2, p0), d01 + d12),
+                    ),
+                    d12,
+                ),
+            ),
+            inverse_tension,
+        );
+        let m2: Point = pt_mul_fl(
+            &pt_add_pt(
+                &p2_sub_p1,
+                &pt_mul_fl(
+                    &pt_sub_pt(
+                        &pt_div_fl(&pt_sub_pt(p3, p2), d23),
+                        &pt_div_fl(&pt_sub_pt(p3, p1), d12 + d23),
+                    ),
+                    d12,
+                ),
+            ),
+            inverse_tension,
+        );
+        let p1_sub_p2: Point = pt_sub_pt(p1, p2);
+        let s_a: Point =
+            pt_add_pt(&pt_add_pt(&pt_mul_fl(&p1_sub_p2, 2.0), &m1), &m2);
+        let s_b: Point = pt_sub_pt(
+            &pt_sub_pt(&pt_sub_pt(&pt_mul_fl(&p1_sub_p2, -3.0), &m1), &m1),
+            &m2,
+        );
+        for slice in slices {
+            spline.push(pt_add_pt(
+                &pt_add_pt(
+                    &pt_add_pt(
+                        &pt_mul_fl(&s_a, slice.t_cubed),
+                        &pt_mul_fl(&s_b, slice.t_squared),
+                    ),
+                    &pt_mul_fl(&m1, slice.t),
+                ),
+                p1,
+            ));
         }
     }
-    vs
-}
-
-fn find_s(
-    n_points: usize,
-    degree: usize,
-    t: f32,
-    knots: &[f32],
-) -> Option<usize> {
-    for i in degree..n_points {
-        if (t <= knots[i + 1]) && (knots[i] <= t) {
-            return Some(i);
-        }
-    }
-    None
-}
-
-#[inline]
-fn deboor(
-    n_dimensions: usize,
-    degree: usize,
-    t: f32,
-    s: usize,
-    mut xs: Vec<f32>,
-    knots: &[f32],
-) -> Vec<f32> {
-    for l in 1..=degree {
-        for i in (s - degree + l..=s).rev() {
-            let alpha: f32 =
-                (t - knots[i]) / (knots[i + degree + 1 - l] - knots[i]);
-            for j in 0..=n_dimensions {
-                let ij: usize = (i * (n_dimensions + 1)) + j;
-                xs[ij] = ((1.0 - alpha)
-                    * xs[((i - 1) * (n_dimensions + 1)) + j])
-                    + (alpha * xs[ij]);
-            }
-        }
-    }
-    xs
-}
-
-#[inline]
-#[allow(clippy::cast_precision_loss)]
-pub fn spline(
-    points: &[f32],
-    n_points: usize,
-    n_dimensions: usize,
-    degree: usize,
-    ts: &[f32],
-) -> Option<Vec<f32>> {
-    if (n_points * n_dimensions) != points.len() {
-        return None;
-    }
-    let knots: Vec<f32> = (0..=n_points + degree).map(|x| x as f32).collect();
-    let low: f32 = knots[degree];
-    let high: f32 = knots[n_points];
-    let vs: Vec<f32> = init_vs(points, n_points, n_dimensions);
-    let mut ys: Vec<f32> = vec![0.0; ts.len() * n_dimensions];
-    for k in 0..ts.len() {
-        if (0.0 <= ts[k]) && (ts[k] <= 1.0) {
-            /* NOTE: "Time" position along spline. */
-            let t: f32 = (ts[k] * (high - low)) + low;
-            let s: usize = find_s(n_points, degree, t, &knots)?;
-            let xs: Vec<f32> =
-                deboor(n_dimensions, degree, t, s, vs.clone(), &knots);
-            for j in 0..n_dimensions {
-                ys[(k * n_dimensions) + j] = xs[(s * (n_dimensions + 1)) + j]
-                    / xs[(s * (n_dimensions + 1)) + n_dimensions];
-            }
-        }
-    }
-    Some(ys)
+    spline
 }
