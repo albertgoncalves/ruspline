@@ -1,16 +1,24 @@
 #![feature(test)]
 
-mod bench;
-mod spline;
-
 use cairo::{Antialias, Context, Format, ImageSurface, LineCap};
 use rand::prelude::{SeedableRng, StdRng};
 use rand_distr::{Distribution, Normal};
-use spline::{Point, Slice};
 use std::env;
 use std::f64;
 use std::fs::File;
 use std::process;
+
+const LINE_WIDTH: f64 = 0.01;
+const ARC_RADIUS: f64 = 0.025;
+const PI_2: f64 = f64::consts::PI * 2.0;
+
+const TILE_SCALE: f64 = 0.65;
+const TILE_OFFSET: f64 = 0.5;
+
+const N_SLICES: usize = 100;
+
+const MEAN: f64 = 0.0;
+const STD: f64 = 0.2;
 
 struct Color {
     r: f64,
@@ -37,33 +45,6 @@ const TEAL: Color = Color {
     b: 0.76,
     a: 0.75,
 };
-
-const LINE_WIDTH: f64 = 0.01;
-const ARC_RADIUS: f64 = 0.025;
-const PI_2: f64 = f64::consts::PI * 2.0;
-
-const TILE_SCALE: f64 = 0.65;
-const TILE_OFFSET: f64 = 0.5;
-
-const N_SLICES: usize = 100;
-
-const MEAN: f64 = 0.0;
-const STD: f64 = 0.2;
-
-fn random_points(
-    distribution: &Normal<f64>,
-    rng: &mut StdRng,
-    n: usize,
-) -> Vec<Point> {
-    let mut points: Vec<Point> = Vec::with_capacity(n);
-    for _ in 0..n {
-        points.push(Point {
-            x: distribution.sample(rng),
-            y: distribution.sample(rng),
-        });
-    }
-    points
-}
 
 struct Args {
     alpha: f64,
@@ -100,6 +81,10 @@ fn parse() -> Args {
                 && (alpha <= 1.0)
                 && (0.0 <= tension)
                 && (tension <= 1.0)
+                && (3 < n_points)
+                && (0 < width)
+                && (0 < height)
+                && (0 < tile_size)
             {
                 return Args {
                     alpha,
@@ -115,11 +100,128 @@ fn parse() -> Args {
         }
     }
     eprintln!(
-        "usage: {} <alpha: f64> <tension: f64> <n_points: u8> <seed: u64> \
-         <width: u16> <height: u16> <tile_size: u16> <filename: string>",
+        "{} ALPHA TENSION N_POINTS SEED WIDTH HEIGHT TILE_SIZE FILENAME \
+         \n  ALPHA     : float  [0.0,1.0] \
+         \n  TENSION   : float  [0.0,1.0] \
+         \n  N_POINTS  : int    [4,2^8 - 1] \
+         \n  SEED      : int    [0,2^64 - 1] \
+         \n  WIDTH     : int    [1,2^16 - 1] \
+         \n  HEIGHT    : int    [1,2^16 - 1] \
+         \n  TILE_SIZE : int    [1,2^16 - 1] \
+         \n  FILENAME  : string",
         &args[0]
     );
     process::exit(1);
+}
+
+fn random_points(
+    distribution: &Normal<f64>,
+    rng: &mut StdRng,
+    n: usize,
+) -> Vec<Point> {
+    let mut points: Vec<Point> = Vec::with_capacity(n);
+    for _ in 0..n {
+        points.push(Point {
+            x: distribution.sample(rng),
+            y: distribution.sample(rng),
+        });
+    }
+    points
+}
+
+struct Point {
+    x: f64,
+    y: f64,
+}
+
+fn distance(a: &Point, b: &Point) -> f64 {
+    let x: f64 = a.x - b.x;
+    let y: f64 = a.y - b.y;
+    ((x * x) + (y * y)).sqrt()
+}
+
+struct Slice {
+    t: f64,
+    t_squared: f64,
+    t_cubed: f64,
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn make_slices(resolution: usize) -> Vec<Slice> {
+    let mut slices: Vec<Slice> = Vec::with_capacity(resolution);
+    for i in 0..resolution {
+        let t: f64 = (i as f64) / (resolution as f64);
+        let t_squared: f64 = t * t;
+        let t_cubed: f64 = t_squared * t;
+        slices.push(Slice {
+            t,
+            t_squared,
+            t_cubed,
+        });
+    }
+    slices
+}
+
+fn make_spline(
+    points: &[Point],
+    slices: &[Slice],
+    alpha: f64,
+    inverse_tension: f64,
+) -> Vec<Point> {
+    let n_points: usize = points.len();
+    let resolution: usize = slices.len();
+    let n_slices: usize = n_points * resolution;
+    let n_splines: usize = n_points - 3;
+    let n_distances: usize = n_points - 1;
+    let mut distances: Vec<f64> = Vec::with_capacity(n_distances);
+    for i in 0..n_distances {
+        distances.push(distance(&points[i], &points[i + 1]).powf(alpha));
+    }
+    let mut spline: Vec<Point> = Vec::with_capacity(n_slices);
+    for i in 0..n_splines {
+        let p0: &Point = &points[i];
+        let p1: &Point = &points[i + 1];
+        let p2: &Point = &points[i + 2];
+        let p3: &Point = &points[i + 3];
+        let d01: f64 = distances[i];
+        let d12: f64 = distances[i + 1];
+        let d23: f64 = distances[i + 2];
+        let x_p2_sub_p1: f64 = p2.x - p1.x;
+        let y_p2_sub_p1: f64 = p2.y - p1.y;
+        let d01_d12: f64 = d01 + d12;
+        let d12_d23: f64 = d12 + d23;
+        let x_m1: f64 = inverse_tension
+            * (x_p2_sub_p1
+                + (d12 * (((p1.x - p0.x) / d01) - ((p2.x - p0.x) / d01_d12))));
+        let y_m1: f64 = inverse_tension
+            * (y_p2_sub_p1
+                + (d12 * (((p1.y - p0.y) / d01) - ((p2.y - p0.y) / d01_d12))));
+        let x_m2: f64 = inverse_tension
+            * (x_p2_sub_p1
+                + (d12 * (((p3.x - p2.x) / d23) - ((p3.x - p1.x) / d12_d23))));
+        let y_m2: f64 = inverse_tension
+            * (y_p2_sub_p1
+                + (d12 * (((p3.y - p2.y) / d23) - ((p3.y - p1.y) / d12_d23))));
+        let x_p1_sub_p2: f64 = p1.x - p2.x;
+        let y_p1_sub_p2: f64 = p1.y - p2.y;
+        let x_a: f64 = 2.0 * x_p1_sub_p2 + x_m1 + x_m2;
+        let y_a: f64 = 2.0 * y_p1_sub_p2 + y_m1 + y_m2;
+        let x_b: f64 = -3.0 * x_p1_sub_p2 - x_m1 - x_m1 - x_m2;
+        let y_b: f64 = -3.0 * y_p1_sub_p2 - y_m1 - y_m1 - y_m2;
+        for slice in slices {
+            spline.push(Point {
+                x: (x_a * slice.t_cubed)
+                    + (x_b * slice.t_squared)
+                    + (x_m1 * slice.t)
+                    + p1.x,
+                y: (y_a * slice.t_cubed)
+                    + (y_b * slice.t_squared)
+                    + (y_m1 * slice.t)
+                    + p1.y,
+            });
+        }
+    }
+    spline
 }
 
 fn main() {
@@ -127,7 +229,7 @@ fn main() {
     let mut rng: StdRng = SeedableRng::seed_from_u64(args.seed);
     let distrbution: Normal<f64> = Normal::new(MEAN, STD).unwrap();
     let inverse_tension: f64 = 1.0 - args.tension;
-    let slices: Vec<Slice> = spline::make_slices(N_SLICES);
+    let slices: Vec<Slice> = make_slices(N_SLICES);
     let tile_size: f64 = f64::from(args.tile_size);
     let scale: f64 = tile_size * TILE_SCALE;
     let surface: ImageSurface = ImageSurface::create(
@@ -156,12 +258,8 @@ fn main() {
             context.scale(scale, scale);
             let points: Vec<Point> =
                 random_points(&distrbution, &mut rng, args.n_points.into());
-            let spline: Vec<Point> = spline::make_spline(
-                &points,
-                &slices,
-                args.alpha,
-                inverse_tension,
-            );
+            let spline: Vec<Point> =
+                make_spline(&points, &slices, args.alpha, inverse_tension);
             for point in points {
                 let x: f64 = point.x;
                 let y: f64 = point.y;
@@ -186,5 +284,28 @@ fn main() {
     }
     if let Ok(mut file) = File::create(args.filename) {
         surface.write_to_png(&mut file).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    extern crate test;
+
+    use super::*;
+    use test::Bencher;
+
+    const ALPHA: f64 = 0.5;
+    const INVERSE_TENSION: f64 = 0.5;
+    const N_POINTS: usize = 20;
+
+    #[bench]
+    fn bench_spline(b: &mut Bencher) {
+        let mut rng: StdRng = SeedableRng::seed_from_u64(0);
+        let distrbution: Normal<f64> =
+            Normal::new(crate::MEAN, crate::STD).unwrap();
+        let points: Vec<Point> =
+            crate::random_points(&distrbution, &mut rng, N_POINTS);
+        let slices: Vec<Slice> = make_slices(crate::N_SLICES);
+        b.iter(|| make_spline(&points, &slices, ALPHA, INVERSE_TENSION))
     }
 }
