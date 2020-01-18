@@ -103,14 +103,14 @@ fn get_args() -> Args {
         }
     }
     eprintln!(
-        "{} ALPHA TENSION N_POINTS SEED WIDTH HEIGHT TILE_SIZE FILENAME \
-         \n  ALPHA     : float  [0.0,1.0] \
-         \n  TENSION   : float  [0.0,1.0] \
-         \n  N_POINTS  : int    [4,2^8 - 1] \
-         \n  SEED      : int    [0,2^64 - 1] \
-         \n  WIDTH     : int    [1,2^16 - 1] \
-         \n  HEIGHT    : int    [1,2^16 - 1] \
-         \n  TILE_SIZE : int    [1,2^16 - 1] \
+        "{} ALPHA TENSION N_POINTS SEED WIDTH HEIGHT TILE_SIZE FILENAME\
+         \n  ALPHA     : float  [0.0,1.0]\
+         \n  TENSION   : float  [0.0,1.0]\
+         \n  N_POINTS  : int    [4,2^8 - 1]\
+         \n  SEED      : int    [0,2^64 - 1]\
+         \n  WIDTH     : int    [1,2^16 - 1]\
+         \n  HEIGHT    : int    [1,2^16 - 1]\
+         \n  TILE_SIZE : int    [1,2^16 - 1]\
          \n  FILENAME  : string",
         &args[0]
     );
