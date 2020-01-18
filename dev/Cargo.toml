@@ -9,6 +9,7 @@ debug = false
 panic = "abort"
 
 [dependencies]
+arrayvec = "0.5.1"
 cairo-rs = { version = "0.2", features = ["png"] }
 rand = "0.7"
 rand_distr = "0.2"

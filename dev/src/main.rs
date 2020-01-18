@@ -1,5 +1,6 @@
 #![feature(test)]
 
+use arrayvec::ArrayVec;
 use cairo::{Antialias, Context, Format, ImageSurface, LineCap};
 use rand::prelude::{SeedableRng, StdRng};
 use rand_distr::{Distribution, Normal};
@@ -8,14 +9,14 @@ use std::f64;
 use std::fs::File;
 use std::process;
 
+const CAPACITY: usize = 100;
+
 const LINE_WIDTH: f64 = 0.01;
 const ARC_RADIUS: f64 = 0.025;
 const PI_2: f64 = f64::consts::PI * 2.0;
 
 const TILE_SCALE: f64 = 0.65;
 const TILE_OFFSET: f64 = 0.5;
-
-const N_SLICES: usize = 100;
 
 const MEAN: f64 = 0.0;
 const STD: f64 = 0.2;
@@ -33,12 +34,14 @@ const LIGHT_GRAY: Color = Color {
     b: 0.95,
     a: 1.0,
 };
+
 const DARK_GRAY: Color = Color {
     r: 0.15,
     g: 0.15,
     b: 0.15,
     a: 1.0,
 };
+
 const TEAL: Color = Color {
     r: 0.17,
     g: 0.82,
@@ -57,7 +60,7 @@ struct Args {
     filename: String,
 }
 
-fn parse() -> Args {
+fn get_args() -> Args {
     let args: Vec<String> = env::args().collect();
     if args.len() == 9 {
         if let (
@@ -147,16 +150,15 @@ struct Slice {
 }
 
 #[allow(clippy::cast_precision_loss)]
-fn make_slices(resolution: usize) -> Vec<Slice> {
-    let mut slices: Vec<Slice> = Vec::with_capacity(resolution);
-    for i in 0..resolution {
-        let t: f64 = (i as f64) / (resolution as f64);
+fn make_slices() -> ArrayVec<[Slice; CAPACITY]> {
+    let mut slices: ArrayVec<[Slice; CAPACITY]> = ArrayVec::new();
+    for i in 0..CAPACITY {
+        let t: f64 = (i as f64) / (CAPACITY as f64);
         let t_squared: f64 = t * t;
-        let t_cubed: f64 = t_squared * t;
         slices.push(Slice {
             t,
             t_squared,
-            t_cubed,
+            t_cubed: t_squared * t,
         });
     }
     slices
@@ -169,15 +171,13 @@ fn make_spline(
     inverse_tension: f64,
 ) -> Vec<Point> {
     let n_points: usize = points.len();
-    let resolution: usize = slices.len();
-    let n_slices: usize = n_points * resolution;
     let n_splines: usize = n_points - 3;
     let n_distances: usize = n_points - 1;
     let mut distances: Vec<f64> = Vec::with_capacity(n_distances);
     for i in 0..n_distances {
         distances.push(distance(&points[i], &points[i + 1]).powf(alpha));
     }
-    let mut spline: Vec<Point> = Vec::with_capacity(n_slices);
+    let mut spline: Vec<Point> = Vec::with_capacity(n_points * CAPACITY);
     for i in 0..n_splines {
         let p0: &Point = &points[i];
         let p1: &Point = &points[i + 1];
@@ -225,11 +225,11 @@ fn make_spline(
 }
 
 fn main() {
-    let args: Args = parse();
+    let args: Args = get_args();
     let mut rng: StdRng = SeedableRng::seed_from_u64(args.seed);
     let distrbution: Normal<f64> = Normal::new(MEAN, STD).unwrap();
     let inverse_tension: f64 = 1.0 - args.tension;
-    let slices: Vec<Slice> = make_slices(N_SLICES);
+    let slices: ArrayVec<[Slice; CAPACITY]> = make_slices();
     let tile_size: f64 = f64::from(args.tile_size);
     let scale: f64 = tile_size * TILE_SCALE;
     let surface: ImageSurface = ImageSurface::create(
@@ -301,11 +301,10 @@ mod benches {
     #[bench]
     fn bench_spline(b: &mut Bencher) {
         let mut rng: StdRng = SeedableRng::seed_from_u64(0);
-        let distrbution: Normal<f64> =
-            Normal::new(crate::MEAN, crate::STD).unwrap();
+        let distrbution: Normal<f64> = Normal::new(MEAN, STD).unwrap();
         let points: Vec<Point> =
-            crate::random_points(&distrbution, &mut rng, N_POINTS);
-        let slices: Vec<Slice> = make_slices(crate::N_SLICES);
+            random_points(&distrbution, &mut rng, N_POINTS);
+        let slices: ArrayVec<[Slice; CAPACITY]> = make_slices();
         b.iter(|| make_spline(&points, &slices, ALPHA, INVERSE_TENSION))
     }
 }
