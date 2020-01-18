@@ -72,7 +72,7 @@ struct Args {
     seed: u64,
     width: u16,
     height: u16,
-    tile_res: u16,
+    tile_size: u16,
     filename: String,
 }
 
@@ -86,7 +86,7 @@ fn parse() -> Args {
             Ok(seed),
             Ok(width),
             Ok(height),
-            Ok(tile_res),
+            Ok(tile_size),
         ) = (
             args[1].parse::<f64>(),
             args[2].parse::<f64>(),
@@ -108,7 +108,7 @@ fn parse() -> Args {
                     seed,
                     width,
                     height,
-                    tile_res,
+                    tile_size,
                     filename: args[8].to_owned(),
                 };
             }
@@ -116,7 +116,7 @@ fn parse() -> Args {
     }
     eprintln!(
         "usage: {} <alpha: f64> <tension: f64> <n_points: u8> <seed: u64> \
-         <width: u16> <height: u16> <tile_res: u16> <filename: string>",
+         <width: u16> <height: u16> <tile_size: u16> <filename: string>",
         &args[0]
     );
     process::exit(1);
@@ -124,16 +124,16 @@ fn parse() -> Args {
 
 fn main() {
     let args: Args = parse();
-    let tile_res_f: f64 = f64::from(args.tile_res);
-    let scale: f64 = tile_res_f * TILE_SCALE;
     let mut rng: StdRng = SeedableRng::seed_from_u64(args.seed);
     let distrbution: Normal<f64> = Normal::new(MEAN, STD).unwrap();
-    let slices: Vec<Slice> = spline::make_slices(N_SLICES);
     let inverse_tension: f64 = 1.0 - args.tension;
+    let slices: Vec<Slice> = spline::make_slices(N_SLICES);
+    let tile_size: f64 = f64::from(args.tile_size);
+    let scale: f64 = tile_size * TILE_SCALE;
     let surface: ImageSurface = ImageSurface::create(
         Format::ARgb32,
-        (args.tile_res * args.width).into(),
-        (args.tile_res * args.height).into(),
+        (args.tile_size * args.width).into(),
+        (args.tile_size * args.height).into(),
     )
     .unwrap();
     let context: Context = Context::new(&surface);
@@ -149,8 +149,8 @@ fn main() {
     context.paint();
     for i in 0..args.width {
         for j in 0..args.height {
-            let x = (f64::from(i) + TILE_OFFSET) * tile_res_f;
-            let y = (f64::from(j) + TILE_OFFSET) * tile_res_f;
+            let x = (f64::from(i) + TILE_OFFSET) * tile_size;
+            let y = (f64::from(j) + TILE_OFFSET) * tile_size;
             context.save();
             context.translate(x, y);
             context.scale(scale, scale);
