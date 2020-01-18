@@ -12,7 +12,8 @@ panic = "abort"
 
 [dependencies]
 cairo-rs = { version = "0.2", features = ["png"] }
-rand = "0.6"
+rand = "0.7"
+rand_distr = "0.2"
 
 [[bin]]
 name = "main"

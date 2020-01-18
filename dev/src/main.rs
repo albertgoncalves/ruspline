@@ -4,7 +4,8 @@ mod bench;
 mod spline;
 
 use cairo::{Antialias, Context, Format, ImageSurface, LineCap};
-use rand::prelude::{Rng, SeedableRng, StdRng};
+use rand::prelude::{SeedableRng, StdRng};
+use rand_distr::{Distribution, Normal};
 use spline::{Point, Slice};
 use std::env;
 use std::f64;
@@ -34,24 +35,31 @@ const TEAL: Color = Color {
     r: 0.17,
     g: 0.82,
     b: 0.76,
-    a: 1.0,
+    a: 0.75,
 };
 
 const LINE_WIDTH: f64 = 0.01;
 const ARC_RADIUS: f64 = 0.025;
 const PI_2: f64 = f64::consts::PI * 2.0;
 
-const SCALE: f64 = 0.65;
-const OFFSET: f64 = (1.0 - SCALE) / 2.0;
+const TILE_SCALE: f64 = 0.65;
+const TILE_OFFSET: f64 = 0.5;
 
 const N_SLICES: usize = 100;
 
-fn random_points(rng: &mut StdRng, n: usize) -> Vec<Point> {
+const MEAN: f64 = 0.0;
+const STD: f64 = 0.2;
+
+fn random_points(
+    distribution: &Normal<f64>,
+    rng: &mut StdRng,
+    n: usize,
+) -> Vec<Point> {
     let mut points: Vec<Point> = Vec::with_capacity(n);
     for _ in 0..n {
         points.push(Point {
-            x: rng.gen::<f64>(),
-            y: rng.gen::<f64>(),
+            x: distribution.sample(rng),
+            y: distribution.sample(rng),
         });
     }
     points
@@ -117,8 +125,9 @@ fn parse() -> Args {
 fn main() {
     let args: Args = parse();
     let tile_res_f: f64 = f64::from(args.tile_res);
-    let scale: f64 = tile_res_f * SCALE;
+    let scale: f64 = tile_res_f * TILE_SCALE;
     let mut rng: StdRng = SeedableRng::seed_from_u64(args.seed);
+    let distrbution: Normal<f64> = Normal::new(MEAN, STD).unwrap();
     let slices: Vec<Slice> = spline::make_slices(N_SLICES);
     let inverse_tension: f64 = 1.0 - args.tension;
     let surface: ImageSurface = ImageSurface::create(
@@ -140,13 +149,13 @@ fn main() {
     context.paint();
     for i in 0..args.width {
         for j in 0..args.height {
-            let x = (f64::from(i) + OFFSET) * tile_res_f;
-            let y = (f64::from(j) + OFFSET) * tile_res_f;
+            let x = (f64::from(i) + TILE_OFFSET) * tile_res_f;
+            let y = (f64::from(j) + TILE_OFFSET) * tile_res_f;
             context.save();
             context.translate(x, y);
             context.scale(scale, scale);
             let points: Vec<Point> =
-                random_points(&mut rng, args.n_points.into());
+                random_points(&distrbution, &mut rng, args.n_points.into());
             let spline: Vec<Point> = spline::make_spline(
                 &points,
                 &slices,
