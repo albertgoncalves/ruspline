@@ -35,8 +35,13 @@ rustup update
 export RUSTFLAGS="-C target-cpu=native"
 
 alias rustfmt="rustup run nightly rustfmt -v"
-alias \
-    clippy="rustup run nightly cargo clippy -- -D warnings -W clippy::pedantic"
+alias clippy="
+    rustup run nightly cargo clippy \
+        --all-targets \
+        -- \
+        -D warnings \
+        -W clippy::pedantic
+"
 alias nighttest="rustup run nightly cargo test"
 alias nightbench="rustup run nightly cargo bench"
 alias nightbuild="rustup run nightly cargo build --release"
