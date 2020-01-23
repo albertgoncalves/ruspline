@@ -5,8 +5,10 @@ edition = "2018"
 
 [profile.release]
 codegen-units = 1
-debug = false
 panic = "abort"
+
+[profile.bench]
+codegen-units = 1
 
 [dependencies]
 arrayvec = "0.5.1"
