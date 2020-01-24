@@ -259,7 +259,7 @@ fn main() {
             );
             context.scale(scale, scale);
             let points: Vec<Point> =
-                random_points(distrbution, &mut rng, args.n_points.into());
+                random_points(distrbution, &mut rng, args.n_points as usize);
             let spline: Vec<Point> =
                 make_spline(&points, &slices, args.alpha, inverse_tension);
             for point in points {
