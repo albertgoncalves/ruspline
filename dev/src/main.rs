@@ -18,8 +18,8 @@ const PI_2: f64 = f64::consts::PI * 2.0;
 const TILE_SCALE: f64 = 0.65;
 const TILE_OFFSET: f64 = 0.5;
 
-const MEAN: f32 = 0.0;
-const STD: f32 = 0.2;
+const MEAN: f64 = 0.0;
+const STD: f64 = 0.2;
 
 struct Color {
     r: f64,
@@ -50,8 +50,8 @@ const TEAL: Color = Color {
 };
 
 struct Args {
-    alpha: f32,
-    tension: f32,
+    alpha: f64,
+    tension: f64,
     n_points: u8,
     seed: u64,
     width: u16,
@@ -72,8 +72,8 @@ fn get_args() -> Args {
             Ok(height),
             Ok(tile_size),
         ) = (
-            args[1].parse::<f32>(),
-            args[2].parse::<f32>(),
+            args[1].parse::<f64>(),
+            args[2].parse::<f64>(),
             args[3].parse::<u8>(),
             args[4].parse::<u64>(),
             args[5].parse::<u16>(),
@@ -118,12 +118,12 @@ fn get_args() -> Args {
 }
 
 struct Point {
-    x: f32,
-    y: f32,
+    x: f64,
+    y: f64,
 }
 
 fn random_points(
-    distribution: Normal<f32>,
+    distribution: &Normal<f64>,
     rng: &mut StdRng,
     n: usize,
 ) -> Vec<Point> {
@@ -137,24 +137,24 @@ fn random_points(
     points
 }
 
-fn distance(a: &Point, b: &Point) -> f32 {
-    let x: f32 = a.x - b.x;
-    let y: f32 = a.y - b.y;
+fn distance(a: &Point, b: &Point) -> f64 {
+    let x: f64 = a.x - b.x;
+    let y: f64 = a.y - b.y;
     ((x * x) + (y * y)).sqrt()
 }
 
 struct Slice {
-    t: f32,
-    t_squared: f32,
-    t_cubed: f32,
+    t: f64,
+    t_squared: f64,
+    t_cubed: f64,
 }
 
 #[allow(clippy::cast_precision_loss)]
 fn make_slices() -> ArrayVec<[Slice; CAPACITY]> {
     let mut slices: ArrayVec<[Slice; CAPACITY]> = ArrayVec::new();
     for i in 0..CAPACITY {
-        let t: f32 = (i as f32) / (CAPACITY as f32);
-        let t_squared: f32 = t * t;
+        let t: f64 = (i as f64) / (CAPACITY as f64);
+        let t_squared: f64 = t * t;
         slices.push(Slice {
             t,
             t_squared,
@@ -167,13 +167,13 @@ fn make_slices() -> ArrayVec<[Slice; CAPACITY]> {
 fn make_spline(
     points: &[Point],
     slices: &[Slice],
-    alpha: f32,
-    inverse_tension: f32,
+    alpha: f64,
+    inverse_tension: f64,
 ) -> Vec<Point> {
     let n_points: usize = points.len();
     let n_splines: usize = n_points - 3;
     let n_distances: usize = n_points - 1;
-    let mut distances: Vec<f32> = Vec::with_capacity(n_distances);
+    let mut distances: Vec<f64> = Vec::with_capacity(n_distances);
     for i in 0..n_distances {
         distances.push(distance(&points[i], &points[i + 1]).powf(alpha));
     }
@@ -183,31 +183,31 @@ fn make_spline(
         let p1: &Point = &points[i + 1];
         let p2: &Point = &points[i + 2];
         let p3: &Point = &points[i + 3];
-        let d01: f32 = distances[i];
-        let d12: f32 = distances[i + 1];
-        let d23: f32 = distances[i + 2];
-        let x_p2_sub_p1: f32 = p2.x - p1.x;
-        let y_p2_sub_p1: f32 = p2.y - p1.y;
-        let d01_d12: f32 = d01 + d12;
-        let d12_d23: f32 = d12 + d23;
-        let x_m1: f32 = inverse_tension
+        let d01: f64 = distances[i];
+        let d12: f64 = distances[i + 1];
+        let d23: f64 = distances[i + 2];
+        let x_p2_sub_p1: f64 = p2.x - p1.x;
+        let y_p2_sub_p1: f64 = p2.y - p1.y;
+        let d01_d12: f64 = d01 + d12;
+        let d12_d23: f64 = d12 + d23;
+        let x_m1: f64 = inverse_tension
             * (x_p2_sub_p1
                 + (d12 * (((p1.x - p0.x) / d01) - ((p2.x - p0.x) / d01_d12))));
-        let y_m1: f32 = inverse_tension
+        let y_m1: f64 = inverse_tension
             * (y_p2_sub_p1
                 + (d12 * (((p1.y - p0.y) / d01) - ((p2.y - p0.y) / d01_d12))));
-        let x_m2: f32 = inverse_tension
+        let x_m2: f64 = inverse_tension
             * (x_p2_sub_p1
                 + (d12 * (((p3.x - p2.x) / d23) - ((p3.x - p1.x) / d12_d23))));
-        let y_m2: f32 = inverse_tension
+        let y_m2: f64 = inverse_tension
             * (y_p2_sub_p1
                 + (d12 * (((p3.y - p2.y) / d23) - ((p3.y - p1.y) / d12_d23))));
-        let x_p1_sub_p2: f32 = p1.x - p2.x;
-        let y_p1_sub_p2: f32 = p1.y - p2.y;
-        let x_a: f32 = 2.0 * x_p1_sub_p2 + x_m1 + x_m2;
-        let y_a: f32 = 2.0 * y_p1_sub_p2 + y_m1 + y_m2;
-        let x_b: f32 = -3.0 * x_p1_sub_p2 - x_m1 - x_m1 - x_m2;
-        let y_b: f32 = -3.0 * y_p1_sub_p2 - y_m1 - y_m1 - y_m2;
+        let x_p1_sub_p2: f64 = p1.x - p2.x;
+        let y_p1_sub_p2: f64 = p1.y - p2.y;
+        let x_a: f64 = 2.0 * x_p1_sub_p2 + x_m1 + x_m2;
+        let y_a: f64 = 2.0 * y_p1_sub_p2 + y_m1 + y_m2;
+        let x_b: f64 = -3.0 * x_p1_sub_p2 - x_m1 - x_m1 - x_m2;
+        let y_b: f64 = -3.0 * y_p1_sub_p2 - y_m1 - y_m1 - y_m2;
         for slice in slices {
             spline.push(Point {
                 x: (x_a * slice.t_cubed)
@@ -228,8 +228,8 @@ fn make_spline(
 fn main() {
     let args: Args = get_args();
     let mut rng: StdRng = SeedableRng::seed_from_u64(args.seed);
-    let distrbution: Normal<f32> = Normal::new(MEAN, STD).unwrap();
-    let inverse_tension: f32 = 1.0 - args.tension;
+    let distrbution: Normal<f64> = Normal::new(MEAN, STD).unwrap();
+    let inverse_tension: f64 = 1.0 - args.tension;
     let slices: ArrayVec<[Slice; CAPACITY]> = make_slices();
     let tile_size: f64 = args.tile_size as f64;
     let scale: f64 = tile_size * TILE_SCALE;
@@ -259,7 +259,7 @@ fn main() {
             );
             context.scale(scale, scale);
             let points: Vec<Point> =
-                random_points(distrbution, &mut rng, args.n_points.into());
+                random_points(&distrbution, &mut rng, args.n_points as usize);
             let spline: Vec<Point> =
                 make_spline(&points, &slices, args.alpha, inverse_tension);
             for point in points {
@@ -296,16 +296,16 @@ mod benches {
     use super::*;
     use test::Bencher;
 
-    const ALPHA: f32 = 0.5;
-    const INVERSE_TENSION: f32 = 0.5;
+    const ALPHA: f64 = 0.5;
+    const INVERSE_TENSION: f64 = 0.5;
     const N_POINTS: usize = 20;
 
     #[bench]
     fn bench_spline(b: &mut Bencher) {
         let mut rng: StdRng = SeedableRng::seed_from_u64(0);
-        let distrbution: Normal<f32> = Normal::new(MEAN, STD).unwrap();
+        let distrbution: Normal<f64> = Normal::new(MEAN, STD).unwrap();
         let points: Vec<Point> =
-            random_points(distrbution, &mut rng, N_POINTS);
+            random_points(&distrbution, &mut rng, N_POINTS);
         let slices: ArrayVec<[Slice; CAPACITY]> = make_slices();
         b.iter(|| make_spline(&points, &slices, ALPHA, INVERSE_TENSION))
     }
