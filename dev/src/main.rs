@@ -262,16 +262,16 @@ fn main() {
             let spline: Vec<Point> =
                 make_spline(&points, &slices, args.alpha, inverse_tension);
             for point in points {
-                let x: f64 = point.x as f64;
-                let y: f64 = point.y as f64;
+                let x: f64 = point.x;
+                let y: f64 = point.y;
                 context.move_to(x, y);
                 context.arc(x, y, ARC_RADIUS, 0.0, PI_2);
             }
             context.set_source_rgba(TEAL.r, TEAL.g, TEAL.b, TEAL.a);
             context.fill();
-            context.move_to(spline[0].x as f64, spline[0].y as f64);
+            context.move_to(spline[0].x, spline[0].y);
             for point in spline[1..].iter() {
-                context.line_to(point.x as f64, point.y as f64);
+                context.line_to(point.x, point.y);
             }
             context.set_source_rgba(
                 LIGHT_GRAY.r,
