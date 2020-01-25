@@ -209,16 +209,15 @@ fn make_spline(
         let x_b: f64 = -3.0 * x_p1_sub_p2 - x_m1 - x_m1 - x_m2;
         let y_b: f64 = -3.0 * y_p1_sub_p2 - y_m1 - y_m1 - y_m2;
         for slice in slices {
-            spline.push(Point {
-                x: (x_a * slice.t_cubed)
-                    + (x_b * slice.t_squared)
-                    + (x_m1 * slice.t)
-                    + p1.x,
-                y: (y_a * slice.t_cubed)
-                    + (y_b * slice.t_squared)
-                    + (y_m1 * slice.t)
-                    + p1.y,
-            });
+            let x: f64 = (x_a * slice.t_cubed)
+                + (x_b * slice.t_squared)
+                + (x_m1 * slice.t)
+                + p1.x;
+            let y: f64 = (y_a * slice.t_cubed)
+                + (y_b * slice.t_squared)
+                + (y_m1 * slice.t)
+                + p1.y;
+            spline.push(Point { x, y });
         }
     }
     spline
@@ -301,12 +300,149 @@ mod benches {
     const N_POINTS: usize = 20;
 
     #[bench]
-    fn bench_spline(b: &mut Bencher) {
+    fn bench_make_spline_f64(b: &mut Bencher) {
         let mut rng: StdRng = SeedableRng::seed_from_u64(0);
         let distrbution: Normal<f64> = Normal::new(MEAN, STD).unwrap();
         let points: Vec<Point> =
             random_points(&distrbution, &mut rng, N_POINTS);
         let slices: ArrayVec<[Slice; CAPACITY]> = make_slices();
         b.iter(|| make_spline(&points, &slices, ALPHA, INVERSE_TENSION))
+    }
+
+    #[allow(non_camel_case_types)]
+    struct Point_f32 {
+        x: f32,
+        y: f32,
+    }
+
+    fn random_points_f32(
+        distribution: Normal<f32>,
+        rng: &mut StdRng,
+        n: usize,
+    ) -> Vec<Point_f32> {
+        let mut points: Vec<Point_f32> = Vec::with_capacity(n);
+        for _ in 0..n {
+            points.push(Point_f32 {
+                x: distribution.sample(rng),
+                y: distribution.sample(rng),
+            });
+        }
+        points
+    }
+
+    fn distance_f32(a: &Point_f32, b: &Point_f32) -> f32 {
+        let x: f32 = a.x - b.x;
+        let y: f32 = a.y - b.y;
+        ((x * x) + (y * y)).sqrt()
+    }
+
+    #[allow(non_camel_case_types)]
+    struct Slice_f32 {
+        t: f32,
+        t_squared: f32,
+        t_cubed: f32,
+    }
+
+    #[allow(clippy::cast_precision_loss)]
+    fn make_slices_f32() -> ArrayVec<[Slice_f32; CAPACITY]> {
+        let mut slices: ArrayVec<[Slice_f32; CAPACITY]> = ArrayVec::new();
+        for i in 0..CAPACITY {
+            let t: f32 = (i as f32) / (CAPACITY as f32);
+            let t_squared: f32 = t * t;
+            slices.push(Slice_f32 {
+                t,
+                t_squared,
+                t_cubed: t_squared * t,
+            });
+        }
+        slices
+    }
+
+    fn make_spline_f32(
+        points: &[Point_f32],
+        slices: &[Slice_f32],
+        alpha: f32,
+        inverse_tension: f32,
+    ) -> Vec<Point_f32> {
+        let n_points: usize = points.len();
+        let n_splines: usize = n_points - 3;
+        let n_distances: usize = n_points - 1;
+        let mut distances: Vec<f32> = Vec::with_capacity(n_distances);
+        for i in 0..n_distances {
+            distances
+                .push(distance_f32(&points[i], &points[i + 1]).powf(alpha));
+        }
+        let mut spline: Vec<Point_f32> =
+            Vec::with_capacity(n_points * CAPACITY);
+        for i in 0..n_splines {
+            let p0: &Point_f32 = &points[i];
+            let p1: &Point_f32 = &points[i + 1];
+            let p2: &Point_f32 = &points[i + 2];
+            let p3: &Point_f32 = &points[i + 3];
+            let d01: f32 = distances[i];
+            let d12: f32 = distances[i + 1];
+            let d23: f32 = distances[i + 2];
+            let x_p2_sub_p1: f32 = p2.x - p1.x;
+            let y_p2_sub_p1: f32 = p2.y - p1.y;
+            let d01_d12: f32 = d01 + d12;
+            let d12_d23: f32 = d12 + d23;
+            let x_m1: f32 = inverse_tension
+                * (x_p2_sub_p1
+                    + (d12
+                        * (((p1.x - p0.x) / d01)
+                            - ((p2.x - p0.x) / d01_d12))));
+            let y_m1: f32 = inverse_tension
+                * (y_p2_sub_p1
+                    + (d12
+                        * (((p1.y - p0.y) / d01)
+                            - ((p2.y - p0.y) / d01_d12))));
+            let x_m2: f32 = inverse_tension
+                * (x_p2_sub_p1
+                    + (d12
+                        * (((p3.x - p2.x) / d23)
+                            - ((p3.x - p1.x) / d12_d23))));
+            let y_m2: f32 = inverse_tension
+                * (y_p2_sub_p1
+                    + (d12
+                        * (((p3.y - p2.y) / d23)
+                            - ((p3.y - p1.y) / d12_d23))));
+            let x_p1_sub_p2: f32 = p1.x - p2.x;
+            let y_p1_sub_p2: f32 = p1.y - p2.y;
+            let x_a: f32 = 2.0 * x_p1_sub_p2 + x_m1 + x_m2;
+            let y_a: f32 = 2.0 * y_p1_sub_p2 + y_m1 + y_m2;
+            let x_b: f32 = -3.0 * x_p1_sub_p2 - x_m1 - x_m1 - x_m2;
+            let y_b: f32 = -3.0 * y_p1_sub_p2 - y_m1 - y_m1 - y_m2;
+            for slice in slices {
+                let x: f32 = (x_a * slice.t_cubed)
+                    + (x_b * slice.t_squared)
+                    + (x_m1 * slice.t)
+                    + p1.x;
+                let y: f32 = (y_a * slice.t_cubed)
+                    + (y_b * slice.t_squared)
+                    + (y_m1 * slice.t)
+                    + p1.y;
+                spline.push(Point_f32 { x, y });
+            }
+        }
+        spline
+    }
+
+    #[bench]
+    #[allow(clippy::cast_possible_truncation)]
+    fn bench_make_spline_f32(b: &mut Bencher) {
+        let mut rng: StdRng = SeedableRng::seed_from_u64(0);
+        let distrbution: Normal<f32> =
+            Normal::new(MEAN as f32, STD as f32).unwrap();
+        let points: Vec<Point_f32> =
+            random_points_f32(distrbution, &mut rng, N_POINTS);
+        let slices: ArrayVec<[Slice_f32; CAPACITY]> = make_slices_f32();
+        b.iter(|| {
+            make_spline_f32(
+                &points,
+                &slices,
+                ALPHA as f32,
+                INVERSE_TENSION as f32,
+            )
+        })
     }
 }
