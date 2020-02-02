@@ -85,9 +85,9 @@ fn get_args() -> Args {
                 && (0.0 <= tension)
                 && (tension <= 1.0)
                 && (3 < n_points)
-                && (0 < width)
-                && (0 < height)
-                && (0 < tile_size)
+                && (width != 0)
+                && (height != 0)
+                && (tile_size != 0)
             {
                 return Args {
                     alpha,
