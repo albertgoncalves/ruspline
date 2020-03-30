@@ -4,14 +4,14 @@ if [ "$(uname -s)" = "Darwin" ]; then
     alias ls="ls --color=auto"
     alias ll="ls -l"
 else
-    alias open="xdg-open"
+    alias open="sxiv"
 fi
 
 export WD=$PWD
 export RUSTUP_HOME="$WD/.rustup_home"
 export CARGO_HOME="$WD/.cargo_home"
 
-for x in $RUSTUP_HOME/downloads $CARGO_HOME/bin dev/out; do
+for x in $RUSTUP_HOME/downloads $CARGO_HOME/bin out; do
     if [ ! -d "$x" ]; then
         mkdir -p "$x"
     fi

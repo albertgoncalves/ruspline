@@ -19,6 +19,7 @@ in
     linux = mkShell {
         buildInputs = [
             pkg-config
+            sxiv
         ] ++ shared;
         shellHook = hook;
     };
