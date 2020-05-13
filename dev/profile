@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [ ! "$(uname -s)" = "Linux" ]; then
+    exit 1
+fi
+
+args=(
+    0.5
+    0.1
+    8
+    0
+    16
+    16
+    350
+    ../out/main.png
+)
+
+sudo sh -c 'echo 1 >/proc/sys/kernel/perf_event_paranoid'
+perf record --call-graph lbr ./target/release/main "${args[@]}"
+perf report
+rm perf.data*
+
+if [ -z "$1" ]; then
+    exit 0
+fi
+
+valgrind --tool=cachegrind ./target/release/main "${args[@]}"
+rm cachegrind.out.*

@@ -19,8 +19,10 @@ in
     linux = mkShell {
         buildInputs = [
             glibcLocales
+            linuxPackages.perf
             pkg-config
             sxiv
+            valgrind
         ] ++ shared;
         shellHook = hook;
     };
