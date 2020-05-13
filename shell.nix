@@ -18,6 +18,7 @@ in
     };
     linux = mkShell {
         buildInputs = [
+            glibcLocales
             pkg-config
             sxiv
         ] ++ shared;

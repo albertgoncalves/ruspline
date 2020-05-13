@@ -320,16 +320,16 @@ fn main() {
     context.paint();
     for i in 0..args.width {
         for j in 0..args.height {
+            let points: Vec<Point> =
+                random_points(&distrbution, &mut rng, args.n_points as usize);
+            let spline: Vec<Point> =
+                make_spline(&points, &slices, args.alpha, inverse_tension);
             context.save();
             context.translate(
                 ((i as f64) + TILE_OFFSET) * tile_size,
                 ((j as f64) + TILE_OFFSET) * tile_size,
             );
             context.scale(scale, scale);
-            let points: Vec<Point> =
-                random_points(&distrbution, &mut rng, args.n_points as usize);
-            let spline: Vec<Point> =
-                make_spline(&points, &slices, args.alpha, inverse_tension);
             for point in points {
                 let x: f64 = point.x;
                 let y: f64 = point.y;
@@ -361,7 +361,11 @@ fn main() {
 mod benches {
     extern crate test;
 
-    use super::*;
+    use super::{
+        f64, make_slices, make_spline, random_points, Add, ArrayVec,
+        Distribution, Div, Mul, Normal, Point, SeedableRng, Slice, StdRng,
+        Sub, CAPACITY, MEAN, STD,
+    };
     use test::Bencher;
 
     const ALPHA: f64 = 0.5;
@@ -480,7 +484,7 @@ mod benches {
         points
     }
 
-    fn distance_f32(a: &Point_f32, b: &Point_f32) -> f32 {
+    fn distance_f32(a: Point_f32, b: Point_f32) -> f32 {
         let x: f32 = a.x - b.x;
         let y: f32 = a.y - b.y;
         ((x * x) + (y * y)).sqrt()
