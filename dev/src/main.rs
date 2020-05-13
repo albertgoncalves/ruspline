@@ -7,6 +7,7 @@ use rand_distr::{Distribution, Normal};
 use std::env;
 use std::f64;
 use std::fs::File;
+use std::ops::{Add, Div, Mul, Sub};
 use std::process;
 
 const CAPACITY: usize = 100;
@@ -117,9 +118,90 @@ fn get_args() -> Args {
     process::exit(1);
 }
 
+#[derive(Clone, Copy)]
 struct Point {
     x: f64,
     y: f64,
+}
+
+impl Add<Point> for Point {
+    type Output = Point;
+    fn add(self, other: Point) -> Point {
+        Point {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+
+impl Add<f64> for Point {
+    type Output = Point;
+    fn add(self, other: f64) -> Point {
+        Point {
+            x: self.x + other,
+            y: self.y + other,
+        }
+    }
+}
+
+impl Sub<Point> for Point {
+    type Output = Point;
+    fn sub(self, other: Point) -> Point {
+        Point {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
+    }
+}
+
+impl Sub<f64> for Point {
+    type Output = Point;
+    fn sub(self, other: f64) -> Point {
+        Point {
+            x: self.x - other,
+            y: self.y - other,
+        }
+    }
+}
+
+impl Mul<Point> for Point {
+    type Output = Point;
+    fn mul(self, other: Point) -> Point {
+        Point {
+            x: self.x * other.x,
+            y: self.y * other.y,
+        }
+    }
+}
+
+impl Mul<f64> for Point {
+    type Output = Point;
+    fn mul(self, other: f64) -> Point {
+        Point {
+            x: self.x * other,
+            y: self.y * other,
+        }
+    }
+}
+
+impl Div<Point> for Point {
+    type Output = Point;
+    fn div(self, other: Point) -> Point {
+        Point {
+            x: self.x / other.x,
+            y: self.y / other.y,
+        }
+    }
+}
+
+impl Div<f64> for Point {
+    type Output = Point;
+    fn div(self, other: f64) -> Point {
+        Point {
+            x: self.x / other,
+            y: self.y / other,
+        }
+    }
 }
 
 fn random_points(
@@ -179,45 +261,32 @@ fn make_spline(
     }
     let mut spline: Vec<Point> = Vec::with_capacity(n_points * CAPACITY);
     for i in 0..n_splines {
-        let p0: &Point = &points[i];
-        let p1: &Point = &points[i + 1];
-        let p2: &Point = &points[i + 2];
-        let p3: &Point = &points[i + 3];
+        let p0: Point = points[i];
+        let p1: Point = points[i + 1];
+        let p2: Point = points[i + 2];
+        let p3: Point = points[i + 3];
         let d01: f64 = distances[i];
         let d12: f64 = distances[i + 1];
         let d23: f64 = distances[i + 2];
-        let x_p2_sub_p1: f64 = p2.x - p1.x;
-        let y_p2_sub_p1: f64 = p2.y - p1.y;
+        let p2_sub_p1: Point = p2 - p1;
         let d01_d12: f64 = d01 + d12;
         let d12_d23: f64 = d12 + d23;
-        let x_m1: f64 = inverse_tension
-            * (x_p2_sub_p1
-                + (d12 * (((p1.x - p0.x) / d01) - ((p2.x - p0.x) / d01_d12))));
-        let y_m1: f64 = inverse_tension
-            * (y_p2_sub_p1
-                + (d12 * (((p1.y - p0.y) / d01) - ((p2.y - p0.y) / d01_d12))));
-        let x_m2: f64 = inverse_tension
-            * (x_p2_sub_p1
-                + (d12 * (((p3.x - p2.x) / d23) - ((p3.x - p1.x) / d12_d23))));
-        let y_m2: f64 = inverse_tension
-            * (y_p2_sub_p1
-                + (d12 * (((p3.y - p2.y) / d23) - ((p3.y - p1.y) / d12_d23))));
-        let x_p1_sub_p2: f64 = p1.x - p2.x;
-        let y_p1_sub_p2: f64 = p1.y - p2.y;
-        let x_a: f64 = 2.0 * x_p1_sub_p2 + x_m1 + x_m2;
-        let y_a: f64 = 2.0 * y_p1_sub_p2 + y_m1 + y_m2;
-        let x_b: f64 = -3.0 * x_p1_sub_p2 - x_m1 - x_m1 - x_m2;
-        let y_b: f64 = -3.0 * y_p1_sub_p2 - y_m1 - y_m1 - y_m2;
+        let m1: Point = (p2_sub_p1
+            + ((((p1 - p0) / d01) - ((p2 - p0) / d01_d12)) * d12))
+            * inverse_tension;
+        let m2: Point = (p2_sub_p1
+            + ((((p3 - p2) / d23) - ((p3 - p1) / d12_d23)) * d12))
+            * inverse_tension;
+        let p1_sub_p2: Point = p1 - p2;
+        let a: Point = (p1_sub_p2 * 2.0) + m1 + m2;
+        let b: Point = (p1_sub_p2 * -3.0) - (m1 * 2.0) - m2;
         for slice in slices {
-            let x: f64 = (x_a * slice.t_cubed)
-                + (x_b * slice.t_squared)
-                + (x_m1 * slice.t)
-                + p1.x;
-            let y: f64 = (y_a * slice.t_cubed)
-                + (y_b * slice.t_squared)
-                + (y_m1 * slice.t)
-                + p1.y;
-            spline.push(Point { x, y });
+            spline.push(
+                (a * slice.t_cubed)
+                    + (b * slice.t_squared)
+                    + (m1 * slice.t)
+                    + p1,
+            );
         }
     }
     spline
@@ -310,9 +379,90 @@ mod benches {
     }
 
     #[allow(non_camel_case_types)]
+    #[derive(Clone, Copy)]
     struct Point_f32 {
         x: f32,
         y: f32,
+    }
+
+    impl Add<Point_f32> for Point_f32 {
+        type Output = Point_f32;
+        fn add(self, other: Point_f32) -> Point_f32 {
+            Point_f32 {
+                x: self.x + other.x,
+                y: self.y + other.y,
+            }
+        }
+    }
+
+    impl Add<f32> for Point_f32 {
+        type Output = Point_f32;
+        fn add(self, other: f32) -> Point_f32 {
+            Point_f32 {
+                x: self.x + other,
+                y: self.y + other,
+            }
+        }
+    }
+
+    impl Sub<Point_f32> for Point_f32 {
+        type Output = Point_f32;
+        fn sub(self, other: Point_f32) -> Point_f32 {
+            Point_f32 {
+                x: self.x - other.x,
+                y: self.y - other.y,
+            }
+        }
+    }
+
+    impl Sub<f32> for Point_f32 {
+        type Output = Point_f32;
+        fn sub(self, other: f32) -> Point_f32 {
+            Point_f32 {
+                x: self.x - other,
+                y: self.y - other,
+            }
+        }
+    }
+
+    impl Mul<Point_f32> for Point_f32 {
+        type Output = Point_f32;
+        fn mul(self, other: Point_f32) -> Point_f32 {
+            Point_f32 {
+                x: self.x * other.x,
+                y: self.y * other.y,
+            }
+        }
+    }
+
+    impl Mul<f32> for Point_f32 {
+        type Output = Point_f32;
+        fn mul(self, other: f32) -> Point_f32 {
+            Point_f32 {
+                x: self.x * other,
+                y: self.y * other,
+            }
+        }
+    }
+
+    impl Div<Point_f32> for Point_f32 {
+        type Output = Point_f32;
+        fn div(self, other: Point_f32) -> Point_f32 {
+            Point_f32 {
+                x: self.x / other.x,
+                y: self.y / other.y,
+            }
+        }
+    }
+
+    impl Div<f32> for Point_f32 {
+        type Output = Point_f32;
+        fn div(self, other: f32) -> Point_f32 {
+            Point_f32 {
+                x: self.x / other,
+                y: self.y / other,
+            }
+        }
     }
 
     fn random_points_f32(
@@ -369,59 +519,37 @@ mod benches {
         let n_distances: usize = n_points - 1;
         let mut distances: Vec<f32> = Vec::with_capacity(n_distances);
         for i in 0..n_distances {
-            distances
-                .push(distance_f32(&points[i], &points[i + 1]).powf(alpha));
+            distances.push(distance_f32(points[i], points[i + 1]).powf(alpha));
         }
         let mut spline: Vec<Point_f32> =
             Vec::with_capacity(n_points * CAPACITY);
         for i in 0..n_splines {
-            let p0: &Point_f32 = &points[i];
-            let p1: &Point_f32 = &points[i + 1];
-            let p2: &Point_f32 = &points[i + 2];
-            let p3: &Point_f32 = &points[i + 3];
+            let p0: Point_f32 = points[i];
+            let p1: Point_f32 = points[i + 1];
+            let p2: Point_f32 = points[i + 2];
+            let p3: Point_f32 = points[i + 3];
             let d01: f32 = distances[i];
             let d12: f32 = distances[i + 1];
             let d23: f32 = distances[i + 2];
-            let x_p2_sub_p1: f32 = p2.x - p1.x;
-            let y_p2_sub_p1: f32 = p2.y - p1.y;
+            let p2_sub_p1: Point_f32 = p2 - p1;
             let d01_d12: f32 = d01 + d12;
             let d12_d23: f32 = d12 + d23;
-            let x_m1: f32 = inverse_tension
-                * (x_p2_sub_p1
-                    + (d12
-                        * (((p1.x - p0.x) / d01)
-                            - ((p2.x - p0.x) / d01_d12))));
-            let y_m1: f32 = inverse_tension
-                * (y_p2_sub_p1
-                    + (d12
-                        * (((p1.y - p0.y) / d01)
-                            - ((p2.y - p0.y) / d01_d12))));
-            let x_m2: f32 = inverse_tension
-                * (x_p2_sub_p1
-                    + (d12
-                        * (((p3.x - p2.x) / d23)
-                            - ((p3.x - p1.x) / d12_d23))));
-            let y_m2: f32 = inverse_tension
-                * (y_p2_sub_p1
-                    + (d12
-                        * (((p3.y - p2.y) / d23)
-                            - ((p3.y - p1.y) / d12_d23))));
-            let x_p1_sub_p2: f32 = p1.x - p2.x;
-            let y_p1_sub_p2: f32 = p1.y - p2.y;
-            let x_a: f32 = 2.0 * x_p1_sub_p2 + x_m1 + x_m2;
-            let y_a: f32 = 2.0 * y_p1_sub_p2 + y_m1 + y_m2;
-            let x_b: f32 = -3.0 * x_p1_sub_p2 - x_m1 - x_m1 - x_m2;
-            let y_b: f32 = -3.0 * y_p1_sub_p2 - y_m1 - y_m1 - y_m2;
+            let m1: Point_f32 = (p2_sub_p1
+                + ((((p1 - p0) / d01) - ((p2 - p0) / d01_d12)) * d12))
+                * inverse_tension;
+            let m2: Point_f32 = (p2_sub_p1
+                + ((((p3 - p2) / d23) - ((p3 - p1) / d12_d23)) * d12))
+                * inverse_tension;
+            let p1_sub_p2: Point_f32 = p1 - p2;
+            let a: Point_f32 = (p1_sub_p2 * 2.0) + m1 + m2;
+            let b: Point_f32 = (p1_sub_p2 * -3.0) - (m1 * 2.0) - m2;
             for slice in slices {
-                let x: f32 = (x_a * slice.t_cubed)
-                    + (x_b * slice.t_squared)
-                    + (x_m1 * slice.t)
-                    + p1.x;
-                let y: f32 = (y_a * slice.t_cubed)
-                    + (y_b * slice.t_squared)
-                    + (y_m1 * slice.t)
-                    + p1.y;
-                spline.push(Point_f32 { x, y });
+                spline.push(
+                    (a * slice.t_cubed)
+                        + (b * slice.t_squared)
+                        + (m1 * slice.t)
+                        + p1,
+                );
             }
         }
         spline
