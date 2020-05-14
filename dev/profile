@@ -18,7 +18,7 @@ args=(
 )
 
 sudo sh -c " echo 0 > /proc/sys/kernel/kptr_restrict"
-perf record --call-graph lbr ./target/release/main "${args[@]}"
+perf record --call-graph dwarf ./target/release/main "${args[@]}"
 perf report
 rm perf.data*
 
