@@ -27,5 +27,5 @@ if [ -z "$1" ]; then
     exit 0
 fi
 
-valgrind --tool=cachegrind ./target/release/main "${args[@]}"
+valgrind --tool=cachegrind --branch-sim=yes ./target/release/main "${args[@]}"
 rm cachegrind.out.*
