@@ -24,6 +24,11 @@ in
             sxiv
             valgrind
         ] ++ shared;
-        shellHook = hook;
+        APPEND_LIBRARY_PATH = stdenv.lib.makeLibraryPath [
+            zlib
+        ];
+        shellHook = hook + ''
+            export LD_LIBRARY_PATH="$APPEND_LIBRARY_PATH:$LD_LIBRARY_PATH"
+        '';
     };
 }
