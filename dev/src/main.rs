@@ -204,7 +204,7 @@ impl Div<f64> for Point {
     }
 }
 
-fn random_points(
+fn get_random_points(
     distribution: &Normal<f64>,
     rng: &mut StdRng,
     n: usize,
@@ -219,7 +219,7 @@ fn random_points(
     points
 }
 
-fn distance(a: &Point, b: &Point) -> f64 {
+fn get_distance(a: &Point, b: &Point) -> f64 {
     let x: f64 = a.x - b.x;
     let y: f64 = a.y - b.y;
     ((x * x) + (y * y)).sqrt()
@@ -232,7 +232,7 @@ struct Slice {
 }
 
 #[allow(clippy::cast_precision_loss)]
-fn make_slices() -> ArrayVec<[Slice; CAPACITY]> {
+fn get_slices() -> ArrayVec<[Slice; CAPACITY]> {
     let mut slices: ArrayVec<[Slice; CAPACITY]> = ArrayVec::new();
     for i in 0..CAPACITY {
         let t: f64 = (i as f64) / (CAPACITY as f64);
@@ -246,7 +246,7 @@ fn make_slices() -> ArrayVec<[Slice; CAPACITY]> {
     slices
 }
 
-fn make_spline(
+fn get_spline(
     points: &[Point],
     slices: &[Slice],
     alpha: f64,
@@ -257,7 +257,7 @@ fn make_spline(
     let n_distances: usize = n_points - 1;
     let mut distances: Vec<f64> = Vec::with_capacity(n_distances);
     for i in 0..n_distances {
-        distances.push(distance(&points[i], &points[i + 1]).powf(alpha));
+        distances.push(get_distance(&points[i], &points[i + 1]).powf(alpha));
     }
     let mut spline: Vec<Point> = Vec::with_capacity(n_points * CAPACITY);
     for i in 0..n_splines {
@@ -298,7 +298,7 @@ fn main() {
     let mut rng: StdRng = SeedableRng::seed_from_u64(args.seed);
     let distrbution: Normal<f64> = Normal::new(MEAN, STD).unwrap();
     let inverse_tension: f64 = 1.0 - args.tension;
-    let slices: ArrayVec<[Slice; CAPACITY]> = make_slices();
+    let slices: ArrayVec<[Slice; CAPACITY]> = get_slices();
     let tile_size: f64 = args.tile_size as f64;
     let scale: f64 = tile_size * TILE_SCALE;
     let surface: ImageSurface = ImageSurface::create(
@@ -320,10 +320,13 @@ fn main() {
     context.paint();
     for i in 0..args.width {
         for j in 0..args.height {
-            let points: Vec<Point> =
-                random_points(&distrbution, &mut rng, args.n_points as usize);
+            let points: Vec<Point> = get_random_points(
+                &distrbution,
+                &mut rng,
+                args.n_points as usize,
+            );
             let spline: Vec<Point> =
-                make_spline(&points, &slices, args.alpha, inverse_tension);
+                get_spline(&points, &slices, args.alpha, inverse_tension);
             context.save();
             context.translate(
                 ((i as f64) + TILE_OFFSET) * tile_size,
@@ -362,7 +365,7 @@ mod benches {
     extern crate test;
 
     use super::{
-        f64, make_slices, make_spline, random_points, Add, ArrayVec,
+        f64, get_random_points, get_slices, get_spline, Add, ArrayVec,
         Distribution, Div, Mul, Normal, Point, SeedableRng, Slice, StdRng,
         Sub, CAPACITY, MEAN, STD,
     };
@@ -373,13 +376,13 @@ mod benches {
     const N_POINTS: usize = 20;
 
     #[bench]
-    fn bench_make_spline_f64(b: &mut Bencher) {
+    fn bench_get_spline_f64(b: &mut Bencher) {
         let mut rng: StdRng = SeedableRng::seed_from_u64(0);
         let distrbution: Normal<f64> = Normal::new(MEAN, STD).unwrap();
         let points: Vec<Point> =
-            random_points(&distrbution, &mut rng, N_POINTS);
-        let slices: ArrayVec<[Slice; CAPACITY]> = make_slices();
-        b.iter(|| make_spline(&points, &slices, ALPHA, INVERSE_TENSION))
+            get_random_points(&distrbution, &mut rng, N_POINTS);
+        let slices: ArrayVec<[Slice; CAPACITY]> = get_slices();
+        b.iter(|| get_spline(&points, &slices, ALPHA, INVERSE_TENSION))
     }
 
     #[allow(non_camel_case_types)]
@@ -469,7 +472,7 @@ mod benches {
         }
     }
 
-    fn random_points_f32(
+    fn get_random_points_f32(
         distribution: Normal<f32>,
         rng: &mut StdRng,
         n: usize,
@@ -484,7 +487,7 @@ mod benches {
         points
     }
 
-    fn distance_f32(a: Point_f32, b: Point_f32) -> f32 {
+    fn get_distance_f32(a: Point_f32, b: Point_f32) -> f32 {
         let x: f32 = a.x - b.x;
         let y: f32 = a.y - b.y;
         ((x * x) + (y * y)).sqrt()
@@ -498,7 +501,7 @@ mod benches {
     }
 
     #[allow(clippy::cast_precision_loss)]
-    fn make_slices_f32() -> ArrayVec<[Slice_f32; CAPACITY]> {
+    fn get_slices_f32() -> ArrayVec<[Slice_f32; CAPACITY]> {
         let mut slices: ArrayVec<[Slice_f32; CAPACITY]> = ArrayVec::new();
         for i in 0..CAPACITY {
             let t: f32 = (i as f32) / (CAPACITY as f32);
@@ -512,7 +515,7 @@ mod benches {
         slices
     }
 
-    fn make_spline_f32(
+    fn get_spline_f32(
         points: &[Point_f32],
         slices: &[Slice_f32],
         alpha: f32,
@@ -523,7 +526,8 @@ mod benches {
         let n_distances: usize = n_points - 1;
         let mut distances: Vec<f32> = Vec::with_capacity(n_distances);
         for i in 0..n_distances {
-            distances.push(distance_f32(points[i], points[i + 1]).powf(alpha));
+            distances
+                .push(get_distance_f32(points[i], points[i + 1]).powf(alpha));
         }
         let mut spline: Vec<Point_f32> =
             Vec::with_capacity(n_points * CAPACITY);
@@ -561,15 +565,15 @@ mod benches {
 
     #[bench]
     #[allow(clippy::cast_possible_truncation)]
-    fn bench_make_spline_f32(b: &mut Bencher) {
+    fn bench_get_spline_f32(b: &mut Bencher) {
         let mut rng: StdRng = SeedableRng::seed_from_u64(0);
         let distrbution: Normal<f32> =
             Normal::new(MEAN as f32, STD as f32).unwrap();
         let points: Vec<Point_f32> =
-            random_points_f32(distrbution, &mut rng, N_POINTS);
-        let slices: ArrayVec<[Slice_f32; CAPACITY]> = make_slices_f32();
+            get_random_points_f32(distrbution, &mut rng, N_POINTS);
+        let slices: ArrayVec<[Slice_f32; CAPACITY]> = get_slices_f32();
         b.iter(|| {
-            make_spline_f32(
+            get_spline_f32(
                 &points,
                 &slices,
                 ALPHA as f32,
