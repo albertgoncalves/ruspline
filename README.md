@@ -6,7 +6,7 @@ Simple implementation of [Catmull–Rom splines](https://qroph.github.io/2018/07
 
 Needed things
 ---
-*   [Nix](https://nixos.org/nix/)
+*   [Nix](https://nixos.org/download.html)
 
 Quick start
 ---
